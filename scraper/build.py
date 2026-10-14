@@ -3,7 +3,8 @@
 
 Reads data/raw/ (terms, sections, catalog, descriptions, attributes) and
 data/syllabi.csv, and writes site/data/courses.json: one record per course,
-with its catalog details and every section in the downloaded terms.
+with its catalog details and every section in the downloaded terms. It also
+writes a page per course and per instructor (pages.py).
 
 Usage:
     python3 scraper/build.py
@@ -12,15 +13,19 @@ Usage:
 from __future__ import annotations
 
 import csv
+import html
 import json
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
 
+from pages import write_pages
+
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
-OUT = ROOT / "site" / "data" / "courses.json"
+SITE = ROOT / "site"
+OUT = SITE / "data" / "courses.json"
 SYLLABI_COLUMNS = ["course", "term", "instructor", "url", "label"]
 
 
@@ -88,7 +93,10 @@ def main() -> None:
                 "term": term, "seq": s["seq"], "crn": s["crn"],
                 "title": s["title"] if s["title"] != rec["title"] else "",
                 "type": s["type"], "method": s["method"],
-                "campus": s["campus"], "instr": s["instr"], "mtg": s["mtg"],
+                "campus": s["campus"],
+                # Banner sends names HTML-escaped (O&#39;Neil), and files
+                # downloaded before scrape.py unescaped them still are.
+                "instr": [html.unescape(i) for i in s["instr"]], "mtg": s["mtg"],
                 "enr": s["enr"], "max": s["max"], "attrs": s["attrs"],
             })
 
@@ -133,6 +141,8 @@ def main() -> None:
         "catalogTerm": terms[0]["code"] if terms else "",
         "courses": ordered,
     }
+    course_pages, instr_pages = write_pages(out, SITE)
+    out["pages"] = {"courses": course_pages, "instructors": instr_pages}
     OUT.parent.mkdir(parents=True, exist_ok=True)
     tmp = OUT.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")))
@@ -140,7 +150,8 @@ def main() -> None:
     n_sections = sum(len(c["sections"]) for c in ordered)
     print(f"{len(ordered)} courses, {n_sections} sections, "
           f"{len(loaded_terms)} terms -> {OUT.relative_to(ROOT)} "
-          f"({OUT.stat().st_size / 1e6:.1f} MB)")
+          f"({OUT.stat().st_size / 1e6:.1f} MB), {len(course_pages)} course and "
+          f"{len(instr_pages)} instructor pages")
 
 
 if __name__ == "__main__":

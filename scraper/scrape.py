@@ -168,7 +168,8 @@ def trim_section(d: dict, attr_names: dict) -> dict:
         "enr": d.get("enrollment"),
         "max": d.get("maximumEnrollment"),
         "xlist": d.get("crossList"),
-        "instr": [f["displayName"] for f in faculty if f.get("displayName")],
+        "instr": [html.unescape(f["displayName"]) for f in faculty
+                  if f.get("displayName")],
         "mtg": meetings,
         "attrs": attrs,
     }

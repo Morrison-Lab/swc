@@ -41,6 +41,13 @@
     return where ? `${when} · ${where}` : when;
   };
 
+  // Static pages written by scraper/pages.py, by course id and instructor name.
+  const coursePage = (id) => `course/${encodeURIComponent(data.pages.courses[id])}.html`;
+  const instrLink = (n, text = n) => {
+    const slug = data.pages.instructors[n];
+    return slug ? `<a href="instructor/${encodeURIComponent(slug)}.html">${esc(text)}</a>` : esc(text);
+  };
+
   const shortName = (n) => {
     // "Last, First Middle" -> "First Last"
     const [last, rest] = n.split(",").map((s) => s.trim());
@@ -160,9 +167,10 @@
     const by = instructorsByTerm(c);
     if (!by.size) return `<li class="chip off">Not offered in listed terms</li>`;
     const chip = (t, cls) => {
-      const who = [...by.get(t.code)].map(shortName);
-      const label = who.length > 3 ? `${who.slice(0, 3).join(", ")} +${who.length - 3}` : who.join(", ");
-      return `<li class="${cls}">${esc(t.name)}${label ? ` <span class="who">· ${esc(label)}</span>` : ""}</li>`;
+      const names = [...by.get(t.code)];
+      const who = names.slice(0, 3).map((n) => instrLink(n, shortName(n)));
+      if (names.length > 3) who.push(`+${names.length - 3}`);
+      return `<li class="${cls}">${esc(t.name)}${who.length ? ` <span class="who">· ${who.join(", ")}</span>` : ""}</li>`;
     };
     const ran = [...data.terms].reverse().filter((t) => by.has(t.code));
     const ahead = ran.filter((t) => t.code >= CURRENT_TERM);
@@ -193,7 +201,7 @@
             <td>${esc(s.crn)}</td>
             <td>${esc(s.type || "")}</td>
             <td class="wrap-ok">${s.mtg.length ? s.mtg.map((m) => esc(meetingText(m))).join("<br>") : "TBA"}</td>
-            <td class="wrap-ok">${s.instr.length ? s.instr.map(esc).join("<br>") : "Staff"}</td>
+            <td class="wrap-ok">${s.instr.length ? s.instr.map(instrLink).join("<br>") : "Staff"}</td>
             <td class="${full ? "full" : "open"}">${esc(s.enr ?? "")}/${esc(s.max ?? "")}</td>
             <td>${esc(data.methods[s.method] || s.method || "")}</td>
           </tr>`);
@@ -217,6 +225,7 @@
 
   function links(c) {
     const out = [
+      `<a href="${coursePage(c.id)}">Course page: every offering</a>`,
       `<a href="${CATALOG_SEARCH}${encodeURIComponent(c.id)}" target="_blank" rel="noopener">Catalog entry</a>`,
       `<a href="${BROWSE_URL}" target="_blank" rel="noopener">Browse Classes</a>`,
     ];
@@ -237,7 +246,7 @@
       <h2><button type="button" aria-expanded="${isOpen}">
         <span class="code">${highlight(c.id)}</span>: ${highlight(c.title || "(untitled)")}
       </button></h2>
-      <p class="meta">${meta} ${attrs}</p>
+      <p class="meta">${meta} ${attrs} <a class="page-link" href="${coursePage(c.id)}">Course page</a></p>
       ${c.desc ? `<p class="desc${isOpen ? "" : " short"}">${highlight(c.desc)}</p>` : ""}
       <ul class="chips">${chips(c)}</ul>
       ${isOpen ? `<div class="detail">

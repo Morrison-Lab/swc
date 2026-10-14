@@ -6,3 +6,5 @@ data/raw/*
 !data/raw/descriptions.json
 !data/raw/attributes.json
 site/data/
+site/course/
+site/instructor/
