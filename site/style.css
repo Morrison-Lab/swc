@@ -5,6 +5,7 @@
  * its theme. With no data-theme (scripts off) the page follows the system's
  * light or dark setting. */
 :root {
+  color-scheme: light dark;
   --bg: #ffffff;
   --fg: #1d2330;
   --muted: #5b6475;
@@ -18,6 +19,9 @@
   --ok: #1d6b3a;
   --warn: #8a4b00;
   --mark: #ffe58a;
+}
+html[data-theme="light"], html[data-theme="offwhite"], html[data-theme="parchment"] {
+  color-scheme: light;
 }
 html[data-theme="offwhite"] {
   --bg: #f5f2ea;
@@ -53,7 +57,7 @@ html[data-theme="dark"] {
   --chip-off: #222833;
   --ok: #7fd49c;
   --warn: #f0b46a;
-  --mark: #6b5a12;
+  --mark: #4a3f0c;  /* 4.8:1 under dark link text */
 }
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) {
@@ -70,7 +74,7 @@ html[data-theme="dark"] {
     --chip-off: #222833;
     --ok: #7fd49c;
     --warn: #f0b46a;
-    --mark: #6b5a12;
+    --mark: #4a3f0c;  /* 4.8:1 under dark link text */
   }
 }
 * { box-sizing: border-box; }
@@ -160,5 +164,6 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; }
   display: block; width: 100%; padding: 6px 14px 6px 28px; border: 0; background: none;
   color: var(--fg); font: inherit; font-size: .95rem; text-align: left; cursor: pointer; position: relative;
 }
-.theme-menu button:hover, .theme-menu button:focus-visible { background: var(--panel); outline: none; }
+.theme-menu button:hover { background: var(--panel); }
+.theme-menu button:focus-visible { background: var(--panel); outline: 2px solid var(--accent); outline-offset: -2px; }
 .theme-menu button[aria-checked="true"]::before { content: "\2713"; position: absolute; left: 10px; }

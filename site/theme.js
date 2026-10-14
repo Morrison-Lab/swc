@@ -75,16 +75,28 @@
       open(false);
       button.focus();
     });
-    menu.addEventListener("keydown", function (e) {
+    wrap.addEventListener("keydown", function (e) {
+      if (menu.hidden) return;
       var i = items.indexOf(document.activeElement);
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      var next = null;
+      if (e.key === "ArrowDown") next = i < 0 ? 0 : (i + 1) % items.length;
+      else if (e.key === "ArrowUp") next = i < 0 ? items.length - 1 : (i - 1 + items.length) % items.length;
+      else if (e.key === "Home") next = 0;
+      else if (e.key === "End") next = items.length - 1;
+      else if (e.key === "Escape") {
         e.preventDefault();
-        var step = e.key === "ArrowDown" ? 1 : -1;
-        items[(i + step + items.length) % items.length].focus();
-      } else if (e.key === "Escape") {
         open(false);
         button.focus();
+        return;
       }
+      if (next !== null) {
+        e.preventDefault();
+        items[next].focus();
+      }
+    });
+    // Close when focus or a click lands outside the picker.
+    wrap.addEventListener("focusout", function (e) {
+      if (!menu.hidden && e.relatedTarget && !wrap.contains(e.relatedTarget)) open(false);
     });
     document.addEventListener("click", function (e) {
       if (!menu.hidden && !wrap.contains(e.target)) open(false);
