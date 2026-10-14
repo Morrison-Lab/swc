@@ -16,8 +16,11 @@ and see every section of a course in the loaded terms, with its instructor, meet
 
 WWU retired its TimeTable/ClassFinder on 2025-10-07; Browse Classes replaced it.
 
-By default the scraper downloads terms from Winter of the current calendar year onward.
+By default the scraper starts from Winter five calendar years before this one (Winter 2021
+in 2026), set by `HISTORY_YEARS` in `scraper/scrape.py`. Terms already downloaded stay in the
+cache, so the history grows from there rather than rolling forward.
 Earlier terms are one flag away (`--since 201840`, or `--all-terms` for everything since 2002).
+Past terms are downloaded once and then kept; the newest six are refreshed on every run.
 
 ### Privacy
 
@@ -49,7 +52,7 @@ Run it by hand from the Actions tab, optionally with a `since` term code to load
 
 Downloaded terms carry over between runs in the Actions cache, not in git.
 If that cache is evicted (GitHub drops caches unused for 7 days),
-the next run rebuilds from `since` only, and older terms loaded by hand drop off the site
+the next run downloads the five years again, and terms older than that loaded by hand drop off the site
 until a run with that `since` is repeated.
 If a term's new download has under half the sections of the cached copy,
 the scraper keeps the old copy, finishes the other terms, and then fails the run,
