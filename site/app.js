@@ -47,6 +47,16 @@
     return rest ? `${rest.split(/\s+/)[0]} ${last}` : n;
   };
 
+  // The term in progress (or next to start) by today's date, as a Banner code:
+  // Winter (10) Jan-Mar, Spring (20) Apr-Jun, Summer (30) Jul-Aug, Fall (40)
+  // Sep-Dec. Terms before it are past.
+  const CURRENT_TERM = (() => {
+    const d = new Date();
+    const m = d.getMonth();
+    return `${d.getFullYear()}${m < 3 ? 10 : m < 6 ? 20 : m < 8 ? 30 : 40}`;
+  })();
+  const PAST_CHIPS = 3;
+
   function instructorsByTerm(c) {
     const out = new Map();
     for (const s of c.sections) {
@@ -90,9 +100,11 @@
     if (els.subj.value && c.subj !== els.subj.value) return false;
     if (els.level.value && String(c.level) !== els.level.value) return false;
     const t = els.term.value;
+    const special = t === "any" || t === "none" || t === "upcoming";
     if (t === "any" && !c.offered.length) return false;
     if (t === "none" && c.offered.length) return false;
-    if (t && t !== "any" && t !== "none" && !c.offered.includes(t)) return false;
+    if (t === "upcoming" && !c.offered.some((o) => o >= CURRENT_TERM)) return false;
+    if (t && !special && !c.offered.includes(t)) return false;
     const a = els.attr.value;
     const m = els.method.value;
     const who = els.instr.value.trim().toLowerCase();
@@ -100,7 +112,7 @@
       // All section-level filters must hold for the same section, and in the
       // chosen term when one is picked.
       const ok = c.sections.some((s) =>
-        (!t || t === "any" || t === "none" || s.term === t) &&
+        (t === "upcoming" ? s.term >= CURRENT_TERM : !t || special || s.term === t) &&
         (!a || s.attrs.includes(a)) &&
         (!m || s.method === m) &&
         (!who || s.instr.some((i) => i.toLowerCase().includes(who))));
@@ -140,39 +152,65 @@
     return raw.split(re).map((part, i) => (i % 3 === 2 ? `<mark>${esc(part)}</mark>` : esc(part))).join("");
   }
 
-  function chips(c) {
+  // One chip per term the course runs: every current and upcoming term, then
+  // the most recent PAST_CHIPS past terms and a count of earlier ones (the
+  // sections table, when the course is open, lists them all).
+  function chips(c, isOpen) {
     const by = instructorsByTerm(c);
     if (!by.size) return `<li class="chip off">Not offered in listed terms</li>`;
-    return data.terms.filter((t) => by.has(t.code)).map((t) => {
+    const chip = (t, cls) => {
       const who = [...by.get(t.code)].map(shortName);
       const label = who.length > 3 ? `${who.slice(0, 3).join(", ")} +${who.length - 3}` : who.join(", ");
-      return `<li class="chip">${esc(t.name)}${label ? ` <span class="who">· ${esc(label)}</span>` : ""}</li>`;
-    }).join("");
+      return `<li class="${cls}">${esc(t.name)}${label ? ` <span class="who">· ${esc(label)}</span>` : ""}</li>`;
+    };
+    const ran = data.terms.filter((t) => by.has(t.code));
+    const ahead = ran.filter((t) => t.code >= CURRENT_TERM);
+    const past = ran.filter((t) => t.code < CURRENT_TERM).reverse();
+    const keep = isOpen ? past : past.slice(0, PAST_CHIPS);
+    const out = ahead.map((t) => chip(t, "chip")).concat(keep.map((t) => chip(t, "chip past")));
+    if (past.length > keep.length) {
+      const n = past.length - keep.length;
+      out.push(`<li class="chip off">+${n} earlier term${n === 1 ? "" : "s"}</li>`);
+    }
+    return out.join("");
   }
 
+  // Current and upcoming terms in one table, newest first; past terms in a
+  // second table under a collapsed "Past terms" heading.
   function sectionsTable(c) {
     if (!c.sections.length) return "<p>No sections in the listed terms.</p>";
-    const rows = [];
-    for (const t of data.terms) {
-      const secs = c.sections.filter((s) => s.term === t.code);
-      if (!secs.length) continue;
-      rows.push(`<tr><th colspan="7">${esc(t.name)}</th></tr>`);
-      for (const s of secs) {
-        const full = s.max && s.enr >= s.max;
-        rows.push(`<tr>
-          <td>${esc(s.seq)}${s.title ? `<br><small>${esc(s.title)}</small>` : ""}</td>
-          <td>${esc(s.crn)}</td>
-          <td>${esc(s.type || "")}</td>
-          <td class="wrap-ok">${s.mtg.length ? s.mtg.map((m) => esc(meetingText(m))).join("<br>") : "TBA"}</td>
-          <td class="wrap-ok">${s.instr.length ? s.instr.map(esc).join("<br>") : "Staff"}</td>
-          <td class="${full ? "full" : "open"}">${esc(s.enr ?? "")}/${esc(s.max ?? "")}</td>
-          <td>${esc(data.methods[s.method] || s.method || "")}</td>
-        </tr>`);
+    const table = (terms) => {
+      const rows = [];
+      for (const t of terms) {
+        const secs = c.sections.filter((s) => s.term === t.code);
+        if (!secs.length) continue;
+        rows.push(`<tr><th colspan="7">${esc(t.name)}</th></tr>`);
+        for (const s of secs) {
+          const full = s.max && s.enr >= s.max;
+          rows.push(`<tr>
+            <td>${esc(s.seq)}${s.title ? `<br><small>${esc(s.title)}</small>` : ""}</td>
+            <td>${esc(s.crn)}</td>
+            <td>${esc(s.type || "")}</td>
+            <td class="wrap-ok">${s.mtg.length ? s.mtg.map((m) => esc(meetingText(m))).join("<br>") : "TBA"}</td>
+            <td class="wrap-ok">${s.instr.length ? s.instr.map(esc).join("<br>") : "Staff"}</td>
+            <td class="${full ? "full" : "open"}">${esc(s.enr ?? "")}/${esc(s.max ?? "")}</td>
+            <td>${esc(data.methods[s.method] || s.method || "")}</td>
+          </tr>`);
+        }
       }
+      return `<div class="table-scroll"><table>
+        <thead><tr><th>Sec</th><th>CRN</th><th>Type</th><th>Meets</th><th>Instructor</th><th>Enrolled</th><th>Delivery</th></tr></thead>
+        <tbody>${rows.join("")}</tbody></table></div>`;
+    };
+    const ran = new Set(c.sections.map((s) => s.term));
+    const terms = [...data.terms].reverse().filter((t) => ran.has(t.code));
+    const ahead = terms.filter((t) => t.code >= CURRENT_TERM);
+    const past = terms.filter((t) => t.code < CURRENT_TERM);
+    let out = ahead.length ? table(ahead) : "<p>Not scheduled this term or later.</p>";
+    if (past.length) {
+      out += `<details class="past-terms"><summary>Past terms (${past.length})</summary>${table(past)}</details>`;
     }
-    return `<div class="table-scroll"><table>
-      <thead><tr><th>Sec</th><th>CRN</th><th>Type</th><th>Meets</th><th>Instructor</th><th>Enrolled</th><th>Delivery</th></tr></thead>
-      <tbody>${rows.join("")}</tbody></table></div>`;
+    return out;
   }
 
   function links(c) {
@@ -199,7 +237,7 @@
       </button></h2>
       <p class="meta">${meta} ${attrs}</p>
       ${c.desc ? `<p class="desc${isOpen ? "" : " short"}">${highlight(c.desc)}</p>` : ""}
-      <ul class="chips">${chips(c)}</ul>
+      <ul class="chips">${chips(c, isOpen)}</ul>
       ${isOpen ? `<div class="detail">
         <h3>Sections</h3>${sectionsTable(c)}
         <div class="links">${links(c)}</div>
@@ -253,7 +291,7 @@
     const levels = [...new Set(data.courses.map((c) => c.level).filter((l) => l !== null))].sort((a, b) => a - b);
     fillSelect(els.level, levels.map((l) =>
       [String(l), l === 0 ? "Below 100" : l >= 500 ? `${l} (graduate)` : String(l)]));
-    fillSelect(els.term, data.terms.map((t) => [t.code, t.name]));
+    fillSelect(els.term, [...data.terms].reverse().map((t) => [t.code, t.name]));
     const usedAttrs = new Set(data.courses.flatMap((c) => c.attrs));
     fillSelect(els.attr, Object.entries(data.attributes).filter(([k]) => usedAttrs.has(k))
       .sort((a, b) => a[1].localeCompare(b[1])));

@@ -18,7 +18,7 @@ e-mail addresses and Banner IDs are dropped. A graduate student who is the
 instructor of record still appears, as on WWU's own Browse Classes.
 
 Usage:
-    python3 scraper/scrape.py                # this calendar year onward + catalog
+    python3 scraper/scrape.py                # the last 5 calendar years onward + catalog
     python3 scraper/scrape.py --since 201840 # Fall 2018 onward
     python3 scraper/scrape.py --all-terms    # every term back to 2002
     python3 scraper/scrape.py --terms 202640 202620
@@ -52,6 +52,9 @@ USER_AGENT = (
 # run (enrollment and instructors still change); older ones already on disk
 # are treated as final.
 RECENT_TERMS = 6
+# By default the site covers this many calendar years before the current one,
+# from Winter, plus every term since.
+HISTORY_YEARS = 5
 
 
 class Banner:
@@ -277,9 +280,9 @@ def main() -> None:
                                 formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--terms", nargs="+", type=term_code, help="term codes to (re)download")
     p.add_argument("--since", type=term_code,
-                   default=f"{date.today().year}10",
-                   help="first term code to download (default: Winter of "
-                        "this calendar year)")
+                   default=f"{date.today().year - HISTORY_YEARS}10",
+                   help=f"first term code to download (default: Winter "
+                        f"{HISTORY_YEARS} years before this calendar year)")
     p.add_argument("--all-terms", action="store_true",
                    help="download every term Banner lists, ignoring --since")
     p.add_argument("--allow-shrink", action="store_true",
