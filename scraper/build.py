@@ -97,10 +97,15 @@ def main() -> None:
     syllabi_path = ROOT / "data" / "syllabi.csv"
     if syllabi_path.exists():
         # A plain CSV (no comment lines), so GitHub can render it as a table.
-        # The header is line 1, so the first row is line 2.
-        with syllabi_path.open(newline="") as f:
-            rows = list(csv.DictReader(f))
-        for n, r in enumerate(rows, 2):
+        # utf-8-sig drops the byte-order mark spreadsheet apps may add, and
+        # each row records the file line it ends on for error messages.
+        with syllabi_path.open(newline="", encoding="utf-8-sig") as f:
+            reader = csv.DictReader(f)
+            rows = [(reader.line_num, r) for r in reader]
+        for n, r in rows:
+            if (r.get("course") or "").lstrip().startswith("#"):
+                sys.exit(f"syllabi.csv line {n}: comment lines are not allowed; "
+                         "put notes in README.md")
             key = " ".join((r.get("course") or "").split()).upper()
             url = (r.get("url") or "").strip()
             if not re.match(r"https?://", url, re.I):
