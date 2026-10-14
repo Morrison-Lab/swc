@@ -27,26 +27,11 @@
         <input id="q" type="search" placeholder="Search by course code, title, keyword or instructor (e.g. &quot;CSCI 241&quot;, &quot;epidemiology&quot;, &quot;Smith&quot;)" autocomplete="off" autofocus>
       </label>
       <div class="filters">
-        <label>Subject
-          <select id="f-subj"><option value="">All subjects</option></select>
-        </label>
-        <label>Offered
-          <select id="f-term">
-            <option value="">Any time</option>
-            <option value="upcoming">This term or later</option>
-            <option value="any">In any listed term</option>
-            <option value="none">Not in listed terms</option>
-          </select>
-        </label>
-        <label>Level
-          <select id="f-level"><option value="">All levels</option></select>
-        </label>
-        <label>Attribute
-          <select id="f-attr"><option value="">Any (GUR, writing, ...)</option></select>
-        </label>
-        <label>Delivery
-          <select id="f-method"><option value="">Any delivery</option></select>
-        </label>
+        <div class="filter"><span id="l-subj">Subject</span><div id="f-subj"></div></div>
+        <div class="filter"><span id="l-term">Offered</span><div id="f-term"></div></div>
+        <div class="filter"><span id="l-level">Level</span><div id="f-level"></div></div>
+        <div class="filter"><span id="l-attr">Attribute</span><div id="f-attr"></div></div>
+        <div class="filter"><span id="l-method">Delivery</span><div id="f-method"></div></div>
         <label>Instructor
           <input id="f-instr" type="text" list="instructors" placeholder="Last name">
           <datalist id="instructors"></datalist>
@@ -74,6 +59,7 @@
   <script src="https://cdn.jsdelivr.net/npm/minisearch@7.1.1/dist/umd/index.min.js"
     integrity="sha384-NaG2onw11DFACpXdRQsBdEloX/dyoVXm8MLdKo0dHSA3SGZU8R7B5IJHI4D0ofwR"
     crossorigin="anonymous"></script>
+  <script src="multiselect.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
