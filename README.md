@@ -65,6 +65,15 @@ course,term,instructor,url,label
 BIOL 204,202640,"Doe, Jane",https://example.edu/biol204-syllabus.pdf,Syllabus
 ```
 
+One row per link:
+
+- `course`: the course as Banner writes it, subject and number (e.g. `EPI 204`).
+- `term` (optional): the Banner term code (e.g. `202640` for Fall 2026).
+- `instructor` (optional): whose syllabus it is.
+- `url`: an `http://` or `https://` link; the build stops on anything else.
+- `label` (optional): the link text, `Syllabus` if empty.
+
+Keep the file plain CSV, with no comment lines, so GitHub shows it as a table.
 Link only public pages, and nothing that names a student.
 
 ## Layout
