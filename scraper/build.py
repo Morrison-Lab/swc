@@ -96,17 +96,18 @@ def main() -> None:
 
     syllabi_path = ROOT / "data" / "syllabi.csv"
     if syllabi_path.exists():
+        # A plain CSV (no comment lines), so GitHub can render it as a table.
+        # The header is line 1, so the first row is line 2.
         with syllabi_path.open(newline="") as f:
-            rows = list(csv.DictReader(
-                line for line in f if not line.startswith("#")))
-        for n, r in enumerate(rows, 1):
+            rows = list(csv.DictReader(f))
+        for n, r in enumerate(rows, 2):
             key = " ".join((r.get("course") or "").split()).upper()
             url = (r.get("url") or "").strip()
             if not re.match(r"https?://", url, re.I):
-                sys.exit(f"syllabi.csv row {n}: url must start with "
+                sys.exit(f"syllabi.csv line {n}: url must start with "
                          f"http:// or https:// (got {url!r})")
             if key not in courses:
-                print(f"warning: syllabi.csv row {n}: no course {key!r}",
+                print(f"warning: syllabi.csv line {n}: no course {key!r}",
                       file=sys.stderr)
                 continue
             courses[key]["syllabi"].append(
