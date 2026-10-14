@@ -107,7 +107,7 @@
     const set = (k, v) => v && p.set(k, v);
     set("q", els.q.value.trim());
     FILTERS.forEach((k) => set(k, ms[k].values.join(",")));
-    if (ms.attr.matchAll && ms.attr.values.length > 1) set("attrs", "all");
+    if (ms.attr.matchAll) set("attrs", "all");
     set("instr", els.instr.value.trim());
     set("open", [...open].join("|"));
     const h = p.toString();
@@ -133,8 +133,9 @@
     const who = els.instr.value.trim().toLowerCase();
     if (attrs.length || methods.length || who) {
       // All section-level filters must hold for the same section, and in a
-      // picked term when terms are picked ("any" and "none" pick no term).
-      const anyTerm = !offered.length || has("any") || has("none");
+      // picked term when terms are picked ("any" picks no term;
+      // courses that match "none" have no sections).
+      const anyTerm = !offered.length || has("any");
       const ok = c.sections.some((s) =>
         (anyTerm || (has("upcoming") && s.term >= CURRENT_TERM) || codes.has(s.term)) &&
         (!attrs.length || (ms.attr.matchAll ? attrs.every((a) => s.attrs.includes(a))

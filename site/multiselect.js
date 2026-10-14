@@ -26,7 +26,7 @@
       this.selected = new Set();
       root.classList.add("ms");
       root.innerHTML = `
-        <button type="button" class="ms-btn" id="${id}-btn" aria-haspopup="true" aria-expanded="false"
+        <button type="button" class="ms-btn" id="${id}-btn" aria-expanded="false"
           aria-controls="${id}-pop" aria-labelledby="${labelId} ${id}-btn"><span class="ms-text"></span></button>
         <div class="ms-pop" id="${id}-pop" role="group" aria-labelledby="${labelId}" hidden>
           <div class="ms-tools">

@@ -103,7 +103,7 @@ a { color: var(--accent); }
 }
 .filters > label { display: flex; flex-direction: column; font-size: .8rem; color: var(--muted); gap: 2px; }
 .filters > label input {
-  font-size: .95rem; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
+  font: inherit; font-size: .95rem; line-height: normal; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px;
   background: var(--bg); color: var(--fg); max-width: 220px;
 }
 .filter { display: flex; flex-direction: column; font-size: .8rem; color: var(--muted); gap: 2px; }
@@ -112,10 +112,10 @@ a { color: var(--accent); }
 .ms { position: relative; }
 .ms-btn {
   display: flex; align-items: center; gap: 8px; width: 200px; max-width: 100%;
-  font: inherit; font-size: .95rem; padding: 6px 8px; text-align: left; cursor: pointer;
+  font: inherit; font-size: .95rem; line-height: normal; padding: 6px 8px; text-align: left; cursor: pointer;
   border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--fg);
 }
-.ms-btn::after { content: "\25BE"; margin-left: auto; color: var(--muted); }
+.ms-btn::after { content: "\25BE"; content: "\25BE" / ""; margin-left: auto; color: var(--muted); }
 .ms-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ms.ms-on .ms-btn { border-color: var(--accent); }
 .ms-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
