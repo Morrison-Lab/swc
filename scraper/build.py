@@ -132,6 +132,10 @@ def main() -> None:
             if not re.match(r"https?://", url, re.I):
                 sys.exit(f"syllabi.csv line {n}: url must start with "
                          f"http:// or https:// (got {url!r})")
+            term = (r.get("term") or "").strip()
+            if term and not re.fullmatch(r"\d{4}[1-4]0", term):
+                sys.exit(f"syllabi.csv line {n}: term must be empty or a Banner "
+                         f"term code such as 202640 for Fall 2026 (got {term!r})")
             if key not in courses:
                 print(f"warning: syllabi.csv line {n}: no course {key!r}",
                       file=sys.stderr)
