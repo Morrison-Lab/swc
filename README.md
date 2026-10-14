@@ -36,7 +36,7 @@ python3 scraper/build.py       # -> site/data/courses.json
 python3 -m http.server -d site 8000
 ```
 
-Course descriptions are fetched one at a time (about 1.5 seconds each) and cached in
+Course descriptions are fetched one at a time, with a pause between requests, and cached in
 `data/raw/descriptions.json`, which is committed, so a run fetches only courses missing from it.
 `--max-descriptions N` caps that for a quick test.
 
