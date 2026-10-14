@@ -1,6 +1,6 @@
 # WWU Course Explorer
 
-A search site for Western Washington University courses, modeled on Stanford's
+A search site for Western Washington University courses, modeled on 
 [ExploreCourses](https://explorecourses.stanford.edu/).
 Search by code, title, keyword, instructor or department,
 filter by subject, term, level, attribute (GUR, writing proficiency, ...) and delivery mode,
