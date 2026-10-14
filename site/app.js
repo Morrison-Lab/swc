@@ -5,6 +5,8 @@
   const PAGE = 50;
   const BROWSE_URL =
     "https://registration.banner.wwu.edu/StudentRegistrationSsb/ssb/term/termSelection?mode=search";
+  const TEXTBOOKS_URL = "https://bookstore.wwu.edu/buy_textbooks.asp";
+  const SUGGEST_URL = "https://github.com/Morrison-Lab/swc/issues/new?template=syllabus.yml&course=";
   const CATALOG_SEARCH =
     "https://catalog.wwu.edu/search_advanced.php?cur_cat_oid=23&search_database=Search" +
     "&search_db=Search&cpage=1&ecpage=1&ppage=1&spage=1&tpage=1&location=3&filter%5Bkeyword%5D=";
@@ -249,11 +251,18 @@
       coursePageLink(c, "Course page: every offering"),
       `<a href="${CATALOG_SEARCH}${encodeURIComponent(c.id)}" target="_blank" rel="noopener">Catalog entry</a>`,
       `<a href="${BROWSE_URL}" target="_blank" rel="noopener">Browse Classes</a>`,
+      `<a href="${TEXTBOOKS_URL}" target="_blank" rel="noopener">Textbooks (WWU Bookstore)</a>`,
     ];
-    for (const s of c.syllabi) {
-      const bits = [s.label || "Syllabus", termName.get(s.term) || s.term, s.instructor].filter(Boolean);
-      out.push(`<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(bits.join(" · "))}</a>`);
-    }
+    return out.join("");
+  }
+
+  // Syllabi and course websites from data/syllabi.csv, newest first.
+  function syllabi(c) {
+    const out = c.syllabi.map((s) => {
+      const bits = [s.label || "Syllabus", s.termName || termName.get(s.term) || s.term, s.instructor].filter(Boolean);
+      return `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(bits.join(" · "))}</a>`;
+    });
+    out.push(`<a href="${SUGGEST_URL}${encodeURIComponent(c.id)}" target="_blank" rel="noopener">Suggest a syllabus link</a>`);
     return out.join("");
   }
 
@@ -273,6 +282,9 @@
       ${isOpen ? `<div class="detail">
         <h3>Sections</h3>${sectionsTable(c)}
         <div class="links">${links(c)}</div>
+        <h3>Syllabi and course websites</h3>
+        ${c.syllabi.length ? "" : `<p class="no-syllabi">None listed yet.</p>`}
+        <div class="links">${syllabi(c)}</div>
       </div>` : ""}
     </li>`;
   }

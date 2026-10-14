@@ -71,13 +71,19 @@ BIOL 204,202640,"Doe, Jane",https://example.edu/biol204-syllabus.pdf,Syllabus
 One row per link:
 
 - `course`: the course as Banner writes it, subject and number (e.g. `EPI 204`).
-- `term` (optional): the Banner term code (e.g. `202640` for Fall 2026).
+- `term` (optional): the Banner term code (e.g. `202640` for Fall 2026); the build stops on anything else.
 - `instructor` (optional): whose syllabus it is.
 - `url`: an `http://` or `https://` link; the build stops on anything else.
 - `label` (optional): the link text, `Syllabus` if empty.
 
 Keep the file plain CSV, with no comment lines, so GitHub shows it as a table.
 Link only public pages, and nothing that names a student.
+
+WWU has no public syllabus archive, so the list is built by hand.
+The first rows come from faculty course sites that are public and list no students.
+Each course's card and page also link to the WWU Bookstore's textbook lookup
+and to a [Suggest a syllabus link](https://github.com/Morrison-Lab/swc/issues/new?template=syllabus.yml) issue form, filled in with the course;
+a suggestion becomes a row here once someone checks the page.
 
 ## Layout
 

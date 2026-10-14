@@ -1,0 +1,52 @@
+name: Suggest a syllabus link
+description: Add a public syllabus or course website to a course in the explorer.
+title: "Syllabus link: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Links go in [`data/syllabi.csv`](https://github.com/Morrison-Lab/swc/blob/main/data/syllabi.csv) and show on the course's card and page.
+        Suggest only public pages (no sign-in), and nothing that names a student.
+  - type: input
+    id: course
+    attributes:
+      label: Course
+      description: Subject and number as Banner writes them.
+      placeholder: CSCI 241
+    validations:
+      required: true
+  - type: input
+    id: url
+    attributes:
+      label: Link
+      description: An http:// or https:// address.
+      placeholder: https://example.wwu.edu/csci241/syllabus.pdf
+    validations:
+      required: true
+  - type: input
+    id: term
+    attributes:
+      label: Term
+      description: Optional, such as Fall 2026.
+  - type: input
+    id: instructor
+    attributes:
+      label: Instructor
+      description: Optional, whose syllabus it is.
+  - type: dropdown
+    id: label
+    attributes:
+      label: What it is
+      options:
+        - Syllabus
+        - Course website
+        - Course materials
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: The page is public and names no student.
+          required: true
