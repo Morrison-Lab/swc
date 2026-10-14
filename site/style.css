@@ -125,6 +125,17 @@ button.link { background: none; border: 0; color: var(--accent); cursor: pointer
 .chip.off { background: var(--chip-off); color: var(--muted); }
 .chip.past { background: var(--chip-off); }
 .chip .who { color: var(--muted); }
+.chip .who a { color: inherit; }
+.page-link { margin-left: 4px; white-space: nowrap; }
+
+/* Course and instructor pages (scraper/pages.py). */
+.top .site-name { margin: 0; font-size: 1.3rem; font-weight: 700; }
+.top .site-name a { color: var(--top-fg); text-decoration: none; }
+.top .site-name a:hover { text-decoration: underline; }
+.crumbs { margin: 16px 0 4px; font-size: .9rem; }
+.page h1 { font-size: 1.5rem; margin: 4px 0; }
+.page h2 { font-size: 1.15rem; margin: 24px 0 6px; }
+.page .links { margin: 10px 0; }
 .attr { font-size: .78rem; border: 1px solid var(--line); border-radius: 4px; padding: 0 6px; color: var(--muted); }
 .links { display: flex; flex-wrap: wrap; gap: 14px; font-size: .9rem; margin: 8px 0; }
 

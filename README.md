@@ -35,7 +35,7 @@ A graduate student who is the instructor of record still appears, as on WWU's ow
 ```sh
 pip install requests
 python3 scraper/scrape.py      # sections, catalog, descriptions -> data/raw/
-python3 scraper/build.py       # -> site/data/courses.json
+python3 scraper/build.py       # -> site/data/courses.json, site/course/, site/instructor/
 python3 -m http.server -d site 8000
 ```
 
@@ -83,4 +83,5 @@ Link only public pages, and nothing that names a student.
 
 - [`scraper/scrape.py`](scraper/scrape.py): downloads from Banner into `data/raw/`
 - [`scraper/build.py`](scraper/build.py): merges sections, catalog, descriptions and syllabi into one index
+- [`scraper/pages.py`](scraper/pages.py): writes a static page per course (every section it has had in the listed terms, and who taught it) and per instructor (every course and section they taught in those terms), plus an instructor list; instructors are matched by the name Banner shows
 - [`site/`](site/): static page (`index.html`, `app.js`, `style.css`) searching the index in the browser with [MiniSearch](https://lucaong.github.io/minisearch/), and `theme.js`, the lab sites' Light / Off-white / Parchment / Dark theme menu (the choice is shared with them under `mln-theme`)
