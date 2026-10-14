@@ -3,7 +3,9 @@
  * new MultiSelect(root, {labelId, all, noun, find}) turns an empty element
  * into a button that opens a list of checkboxes. `all` is the button text with
  * nothing picked ("All subjects"), `noun` names several picks ("3 subjects"),
- * and `find` adds a box that narrows a long list. The root element fires
+ * `find` adds a box that narrows a long list, and `matchAll` adds a "Match
+ * all" switch (read from .matchAll) for filters where requiring every pick
+ * can make more sense than any one of them. The root element fires
  * "change" when the picks change. Escape, a click outside or tabbing away
  * closes the list; the arrow keys move between its checkboxes.
  */
@@ -15,7 +17,7 @@
   }[c]));
 
   class MultiSelect {
-    constructor(root, { labelId, all, noun, find = false }) {
+    constructor(root, { labelId, all, noun, find = false, matchAll = false }) {
       const id = `ms${++uid}`;
       this.root = root;
       this.all = all;
@@ -31,6 +33,7 @@
             ${find ? `<input type="search" class="ms-find" placeholder="Filter this list" aria-label="Filter this list" autocomplete="off">` : ""}
             <button type="button" class="link ms-clear">Clear</button>
           </div>
+          ${matchAll ? `<label class="ms-mode"><input type="checkbox" class="ms-all"> Match all picks (otherwise any)</label>` : ""}
           <ul class="ms-list"></ul>
         </div>`;
       this.btn = root.querySelector(".ms-btn");
@@ -38,6 +41,11 @@
       this.pop = root.querySelector(".ms-pop");
       this.list = root.querySelector(".ms-list");
       this.find = root.querySelector(".ms-find");
+      this.allBox = root.querySelector(".ms-all");
+      this.allBox?.addEventListener("change", () => {
+        this.render();
+        if (this.selected.size > 1) this.fire();
+      });
 
       this.btn.addEventListener("click", () => (this.pop.hidden ? this.open() : this.close()));
       root.querySelector(".ms-clear").addEventListener("click", () => {
@@ -80,6 +88,15 @@
       this.render();
     }
 
+    get matchAll() {
+      return !!this.allBox?.checked;
+    }
+
+    set matchAll(on) {
+      if (this.allBox) this.allBox.checked = !!on;
+      this.render();
+    }
+
     // Picks in list order.
     get values() {
       return [...this.labels.keys()].filter((v) => this.selected.has(v));
@@ -94,7 +111,8 @@
     render() {
       const vals = this.values;
       this.text.textContent = !vals.length ? this.all
-        : vals.length === 1 ? this.labels.get(vals[0]) : `${vals.length} ${this.noun}`;
+        : vals.length === 1 ? this.labels.get(vals[0])
+        : `${vals.length} ${this.noun}${this.matchAll ? ", all" : ""}`;
       this.root.classList.toggle("ms-on", vals.length > 0);
     }
 
@@ -130,7 +148,7 @@
         return;
       }
       if ((ev.key === "ArrowDown" || ev.key === "ArrowUp") && !this.pop.hidden) {
-        const items = [this.find, ...[...this.list.querySelectorAll("li:not([hidden]) input")]].filter(Boolean);
+        const items = [this.find, this.allBox, ...this.list.querySelectorAll("li:not([hidden]) input")].filter(Boolean);
         if (!items.length) return;
         ev.preventDefault();
         const i = items.indexOf(document.activeElement);

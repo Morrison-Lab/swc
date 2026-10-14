@@ -18,12 +18,13 @@
   };
 
   // The checkbox filters (multiselect.js). Picks within one filter match any
-  // of them; different filters must all hold.
+  // of them (or, for attributes, all of them when "Match all" is on);
+  // different filters must all hold.
   const ms = {
     subj: new MultiSelect($("f-subj"), { labelId: "l-subj", all: "All subjects", noun: "subjects", find: true }),
     term: new MultiSelect($("f-term"), { labelId: "l-term", all: "Any time", noun: "choices", find: true }),
     level: new MultiSelect($("f-level"), { labelId: "l-level", all: "All levels", noun: "levels" }),
-    attr: new MultiSelect($("f-attr"), { labelId: "l-attr", all: "Any (GUR, writing, ...)", noun: "attributes", find: true }),
+    attr: new MultiSelect($("f-attr"), { labelId: "l-attr", all: "Any (GUR, writing, ...)", noun: "attributes", find: true, matchAll: true }),
     method: new MultiSelect($("f-method"), { labelId: "l-method", all: "Any delivery", noun: "delivery modes" }),
   };
   const FILTERS = Object.keys(ms);
@@ -95,6 +96,7 @@
     const p = new URLSearchParams(location.hash.slice(1));
     els.q.value = p.get("q") || "";
     FILTERS.forEach((k) => { ms[k].values = (p.get(k) || "").split(",").filter(Boolean); });
+    ms.attr.matchAll = p.get("attrs") === "all";
     els.instr.value = p.get("instr") || "";
     open.clear();
     (p.get("open") || "").split("|").filter(Boolean).forEach((id) => open.add(id));
@@ -105,6 +107,7 @@
     const set = (k, v) => v && p.set(k, v);
     set("q", els.q.value.trim());
     FILTERS.forEach((k) => set(k, ms[k].values.join(",")));
+    if (ms.attr.matchAll && ms.attr.values.length > 1) set("attrs", "all");
     set("instr", els.instr.value.trim());
     set("open", [...open].join("|"));
     const h = p.toString();
@@ -134,7 +137,8 @@
       const anyTerm = !offered.length || has("any") || has("none");
       const ok = c.sections.some((s) =>
         (anyTerm || (has("upcoming") && s.term >= CURRENT_TERM) || codes.has(s.term)) &&
-        (!attrs.length || s.attrs.some((a) => attrs.includes(a))) &&
+        (!attrs.length || (ms.attr.matchAll ? attrs.every((a) => s.attrs.includes(a))
+          : attrs.some((a) => s.attrs.includes(a)))) &&
         (!methods.length || methods.includes(s.method)) &&
         (!who || s.instr.some((i) => i.toLowerCase().includes(who))));
       if (!ok) return false;
@@ -347,6 +351,7 @@
     els.reset.addEventListener("click", () => {
       els.q.value = els.instr.value = "";
       FILTERS.forEach((k) => { ms[k].values = []; });
+      ms.attr.matchAll = false;
       open.clear();
       run();
     });
