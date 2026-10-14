@@ -16,8 +16,9 @@ and see every section of a course in the loaded terms, with its instructor, meet
 
 WWU retired its TimeTable/ClassFinder on 2025-10-07; Browse Classes replaced it.
 
-By default the scraper covers the five calendar years before this one and every term since
-(from Winter 2021 in 2026), set by `HISTORY_YEARS` in `scraper/scrape.py`.
+By default the scraper starts from Winter five calendar years before this one (Winter 2021
+in 2026), set by `HISTORY_YEARS` in `scraper/scrape.py`. Terms already downloaded stay in the
+cache, so the history grows from there rather than rolling forward.
 Earlier terms are one flag away (`--since 201840`, or `--all-terms` for everything since 2002).
 Past terms are downloaded once and then kept; the newest six are refreshed on every run.
 

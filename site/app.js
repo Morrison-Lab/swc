@@ -152,10 +152,11 @@
     return raw.split(re).map((part, i) => (i % 3 === 2 ? `<mark>${esc(part)}</mark>` : esc(part))).join("");
   }
 
-  // One chip per term the course runs: every current and upcoming term, then
-  // the most recent PAST_CHIPS past terms and a count of earlier ones (the
-  // sections table, when the course is open, lists them all).
-  function chips(c, isOpen) {
+  // One chip per term the course runs, newest first: every current and
+  // upcoming term, then the most recent PAST_CHIPS past terms (plus the term
+  // picked in the filter, so a match on an old term shows why) and a count of
+  // earlier ones. An open course's sections table lists every term.
+  function chips(c) {
     const by = instructorsByTerm(c);
     if (!by.size) return `<li class="chip off">Not offered in listed terms</li>`;
     const chip = (t, cls) => {
@@ -163,10 +164,10 @@
       const label = who.length > 3 ? `${who.slice(0, 3).join(", ")} +${who.length - 3}` : who.join(", ");
       return `<li class="${cls}">${esc(t.name)}${label ? ` <span class="who">· ${esc(label)}</span>` : ""}</li>`;
     };
-    const ran = data.terms.filter((t) => by.has(t.code));
+    const ran = [...data.terms].reverse().filter((t) => by.has(t.code));
     const ahead = ran.filter((t) => t.code >= CURRENT_TERM);
-    const past = ran.filter((t) => t.code < CURRENT_TERM).reverse();
-    const keep = isOpen ? past : past.slice(0, PAST_CHIPS);
+    const past = ran.filter((t) => t.code < CURRENT_TERM);
+    const keep = past.filter((t, i) => i < PAST_CHIPS || t.code === els.term.value);
     const out = ahead.map((t) => chip(t, "chip")).concat(keep.map((t) => chip(t, "chip past")));
     if (past.length > keep.length) {
       const n = past.length - keep.length;
@@ -208,7 +209,8 @@
     const past = terms.filter((t) => t.code < CURRENT_TERM);
     let out = ahead.length ? table(ahead) : "<p>Not scheduled this term or later.</p>";
     if (past.length) {
-      out += `<details class="past-terms"><summary>Past terms (${past.length})</summary>${table(past)}</details>`;
+      const picked = past.some((t) => t.code === els.term.value);
+      out += `<details class="past-terms"${picked ? " open" : ""}><summary>Past terms (${past.length})</summary>${table(past)}</details>`;
     }
     return out;
   }
@@ -237,7 +239,7 @@
       </button></h2>
       <p class="meta">${meta} ${attrs}</p>
       ${c.desc ? `<p class="desc${isOpen ? "" : " short"}">${highlight(c.desc)}</p>` : ""}
-      <ul class="chips">${chips(c, isOpen)}</ul>
+      <ul class="chips">${chips(c)}</ul>
       ${isOpen ? `<div class="detail">
         <h3>Sections</h3>${sectionsTable(c)}
         <div class="links">${links(c)}</div>
