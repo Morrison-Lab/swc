@@ -153,9 +153,6 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
         return (f'<td class="{"full" if full else "open"}">'
                 f'{e(s["enr"] if s["enr"] is not None else "")}/{e(s["max"] if s["max"] is not None else "")}</td>')
 
-    def newest_first(pairs):
-        return sorted(pairs, key=lambda p: (p[0], p[1]), reverse=True)
-
     for sub in ("course", "instructor"):
         shutil.rmtree(site / sub, ignore_errors=True)
         (site / sub).mkdir(parents=True, exist_ok=True)
@@ -207,12 +204,12 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                     f'<td>{e(s["seq"])}{title}</td><td>{e(s["crn"])}</td><td>{e(s["type"] or "")}</td>'
                     f'<td class="wrap-ok">{when(s)}</td><td class="wrap-ok">{instr}</td>'
                     f'{enrolled(s)}<td>{e(methods.get(s["method"]) or s["method"] or "")}</td></tr>\n')
-            parts.append(f'    <h2>Every offering ({len(secs)} section{"" if len(secs) == 1 else "s"})</h2>')
+            parts.append(f'    <h2>Every offering in the listed terms ({len(secs)} section{"" if len(secs) == 1 else "s"})</h2>')
             parts.append(table(["Term", "Sec", "CRN", "Type", "Meets", "Instructor",
                                 "Enrolled", "Delivery"], rows))
         desc = f'When {c["id"]} has been offered at WWU and who taught it.'
         (site / "course" / f'{course_slug[c["id"]]}.html').write_text(
-            page(name, desc, "\n".join(parts)))
+            page(name, desc, "\n".join(parts)), encoding="utf-8")
 
     # ---------- instructor pages ----------
     for name, pairs in taught.items():
@@ -244,11 +241,11 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                 f'<td>{e(s["seq"])}</td><td>{e(s["crn"])}</td>'
                 f'<td class="wrap-ok">{when(s)}</td>{enrolled(s)}'
                 f'<td>{e(methods.get(s["method"]) or s["method"] or "")}</td></tr>\n')
-        parts.append(f'    <h2>Every section ({len(pairs)})</h2>')
+        parts.append(f'    <h2>Every section in the listed terms ({len(pairs)})</h2>')
         parts.append(table(["Term", "Course", "Sec", "CRN", "Meets", "Enrolled", "Delivery"], rows))
         desc = f"Courses {short_name(name)} has taught at WWU, by term."
         (site / "instructor" / f"{instr_slug[name]}.html").write_text(
-            page(short_name(name), desc, "\n".join(parts)))
+            page(short_name(name), desc, "\n".join(parts)), encoding="utf-8")
 
     # ---------- instructor index ----------
     rows = []
@@ -261,6 +258,6 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
             f"    <p>{len(taught):,} instructors of record in the listed terms.</p>\n"
             + table(["Instructor", "Courses", "Sections", "Terms"], rows))
     (site / "instructor" / "index.html").write_text(
-        page("All instructors", "Every WWU instructor of record in the explorer's terms.", body))
+        page("All instructors", "Every WWU instructor of record in the explorer's terms.", body), encoding="utf-8")
 
     return course_slug, instr_slug
