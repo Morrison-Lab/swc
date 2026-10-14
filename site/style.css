@@ -1,3 +1,9 @@
+/* Colours for the four themes in theme.js: Light, Off-white, Parchment, Dark.
+ * Off-white and Parchment use the page, ink, link, muted and border colours of
+ * the lab's Quarto sites (Morrison-Lab/qwt offwhite.scss). Every text colour
+ * here is at least 4.5:1 (WCAG AA) on the page, panel and chip backgrounds of
+ * its theme. With no data-theme (scripts off) the page follows the system's
+ * light or dark setting. */
 :root {
   --bg: #ffffff;
   --fg: #1d2330;
@@ -5,25 +11,66 @@
   --line: #dde2ea;
   --panel: #f5f7fa;
   --accent: #003f87;      /* WWU blue */
-  --accent-fg: #ffffff;
+  --top-bg: #3a5272;      /* muted slate blue, 8:1 with white */
+  --top-fg: #ffffff;
   --chip: #e8eef8;
   --chip-off: #f0f1f3;
   --ok: #1d6b3a;
   --warn: #8a4b00;
+  --mark: #ffe58a;
+}
+html[data-theme="offwhite"] {
+  --bg: #f5f2ea;
+  --fg: #2b2a27;
+  --muted: #5f666d;
+  --line: #dcd8cc;
+  --panel: #f8f6f0;
+  --accent: #1a64b8;
+  --chip: #e9e4d6;
+  --chip-off: #eeebe3;
+}
+html[data-theme="parchment"] {
+  --bg: #f1e8d0;
+  --fg: #3a2f1f;
+  --muted: #6b5a43;
+  --line: #d8c9a8;
+  --panel: #faf5e8;
+  --accent: #8a3b0f;
+  --chip: #e6d9b6;
+  --chip-off: #ebe2c8;
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #12161d;
+  --fg: #e5e9f0;
+  --muted: #9aa4b5;
+  --line: #2b3240;
+  --panel: #1a2029;
+  --accent: #7fb0ff;
+  --top-bg: #1c2430;
+  --top-fg: #e5e9f0;
+  --chip: #1f2c44;
+  --chip-off: #222833;
+  --ok: #7fd49c;
+  --warn: #f0b46a;
+  --mark: #6b5a12;
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  html:not([data-theme]) {
+    color-scheme: dark;
     --bg: #12161d;
     --fg: #e5e9f0;
     --muted: #9aa4b5;
     --line: #2b3240;
     --panel: #1a2029;
     --accent: #7fb0ff;
-    --accent-fg: #0b1220;
+    --top-bg: #1c2430;
+    --top-fg: #e5e9f0;
     --chip: #1f2c44;
     --chip-off: #222833;
     --ok: #7fd49c;
     --warn: #f0b46a;
+    --mark: #6b5a12;
   }
 }
 * { box-sizing: border-box; }
@@ -35,7 +82,8 @@ body {
 }
 a { color: var(--accent); }
 .wrap { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
-.top { background: var(--accent); color: var(--accent-fg); padding: 20px 0 16px; }
+.top { background: var(--top-bg); color: var(--top-fg); padding: 20px 0 16px; }
+.top .wrap { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .top h1 { margin: 0; font-size: 1.6rem; }
 .top .sub { margin: 4px 0 0; opacity: .9; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -85,10 +133,32 @@ td.wrap-ok { white-space: normal; }
 th { color: var(--muted); font-weight: 600; }
 .full { color: var(--warn); }
 .open { color: var(--ok); }
-mark { background: #ffe58a; color: inherit; border-radius: 2px; }
-@media (prefers-color-scheme: dark) { mark { background: #6b5a12; } }
+mark { background: var(--mark); color: inherit; border-radius: 2px; }
 
 .more[hidden] { display: none; }
 .more { display: block; margin: 16px auto 32px; padding: 8px 18px; border: 1px solid var(--line);
   border-radius: 8px; background: var(--panel); color: var(--fg); cursor: pointer; font-size: 1rem; }
 .foot { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 24px; padding-top: 12px; padding-bottom: 24px; }
+
+/* Theme picker (theme.js). */
+.theme-picker { position: relative; flex: none; }
+.theme-button {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: 0; border-radius: 6px;
+  background: transparent; color: var(--top-fg); cursor: pointer;
+}
+.theme-button:hover, .theme-button[aria-expanded="true"] { background: rgba(255, 255, 255, .15); }
+.theme-button:focus-visible { outline: 2px solid var(--top-fg); outline-offset: 2px; }
+.theme-menu {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 10;
+  min-width: 140px; margin: 0; padding: 4px 0; list-style: none;
+  background: var(--bg); color: var(--fg);
+  border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, .18);
+}
+.theme-menu[hidden] { display: none; }
+.theme-menu button {
+  display: block; width: 100%; padding: 6px 14px 6px 28px; border: 0; background: none;
+  color: var(--fg); font: inherit; font-size: .95rem; text-align: left; cursor: pointer; position: relative;
+}
+.theme-menu button:hover, .theme-menu button:focus-visible { background: var(--panel); outline: none; }
+.theme-menu button[aria-checked="true"]::before { content: "\2713"; position: absolute; left: 10px; }

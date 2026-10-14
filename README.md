@@ -71,4 +71,4 @@ Link only public pages, and nothing that names a student.
 
 - [`scraper/scrape.py`](scraper/scrape.py): downloads from Banner into `data/raw/`
 - [`scraper/build.py`](scraper/build.py): merges sections, catalog, descriptions and syllabi into one index
-- [`site/`](site/): static page (`index.html`, `app.js`, `style.css`) searching the index in the browser with [MiniSearch](https://lucaong.github.io/minisearch/)
+- [`site/`](site/): static page (`index.html`, `app.js`, `style.css`) searching the index in the browser with [MiniSearch](https://lucaong.github.io/minisearch/), and `theme.js`, the lab sites' Light / Off-white / Parchment / Dark theme menu (the choice is shared with them under `mln-theme`)
