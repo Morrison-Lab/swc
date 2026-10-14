@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
 OUT = ROOT / "site" / "data" / "courses.json"
+SYLLABI_COLUMNS = ["course", "term", "instructor", "url", "label"]
 
 
 def load(path: Path, default):
@@ -101,6 +102,10 @@ def main() -> None:
         # each row records the file line it ends on for error messages.
         with syllabi_path.open(newline="", encoding="utf-8-sig") as f:
             reader = csv.DictReader(f)
+            if reader.fieldnames != SYLLABI_COLUMNS:
+                sys.exit(f"syllabi.csv line 1: header must be "
+                         f"{','.join(SYLLABI_COLUMNS)} (got "
+                         f"{','.join(reader.fieldnames or [])!r})")
             rows = [(reader.line_num, r) for r in reader]
         for n, r in rows:
             if (r.get("course") or "").lstrip().startswith("#"):
