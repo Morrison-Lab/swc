@@ -42,9 +42,14 @@
   };
 
   // Static pages written by scraper/pages.py, by course id and instructor name.
-  const coursePage = (id) => `course/${encodeURIComponent(data.pages.courses[id])}.html`;
+  // A browser holding a courses.json from before the pages existed gets no links.
+  const coursePageLink = (c, text, cls = "") => {
+    const slug = data.pages?.courses?.[c.id];
+    return slug ? `<a${cls ? ` class="${cls}"` : ""} href="course/${encodeURIComponent(slug)}.html"` +
+      ` aria-label="${esc(`${text} for ${c.id}`)}">${esc(text)}</a>` : "";
+  };
   const instrLink = (n, text = n) => {
-    const slug = data.pages.instructors[n];
+    const slug = data.pages?.instructors?.[n];
     return slug ? `<a href="instructor/${encodeURIComponent(slug)}.html">${esc(text)}</a>` : esc(text);
   };
 
@@ -201,7 +206,7 @@
             <td>${esc(s.crn)}</td>
             <td>${esc(s.type || "")}</td>
             <td class="wrap-ok">${s.mtg.length ? s.mtg.map((m) => esc(meetingText(m))).join("<br>") : "TBA"}</td>
-            <td class="wrap-ok">${s.instr.length ? s.instr.map(instrLink).join("<br>") : "Staff"}</td>
+            <td class="wrap-ok">${s.instr.length ? s.instr.map((n) => instrLink(n)).join("<br>") : "Staff"}</td>
             <td class="${full ? "full" : "open"}">${esc(s.enr ?? "")}/${esc(s.max ?? "")}</td>
             <td>${esc(data.methods[s.method] || s.method || "")}</td>
           </tr>`);
@@ -225,7 +230,7 @@
 
   function links(c) {
     const out = [
-      `<a href="${coursePage(c.id)}">Course page: every offering</a>`,
+      coursePageLink(c, "Course page: every offering"),
       `<a href="${CATALOG_SEARCH}${encodeURIComponent(c.id)}" target="_blank" rel="noopener">Catalog entry</a>`,
       `<a href="${BROWSE_URL}" target="_blank" rel="noopener">Browse Classes</a>`,
     ];
@@ -246,7 +251,7 @@
       <h2><button type="button" aria-expanded="${isOpen}">
         <span class="code">${highlight(c.id)}</span>: ${highlight(c.title || "(untitled)")}
       </button></h2>
-      <p class="meta">${meta} ${attrs} <a class="page-link" href="${coursePage(c.id)}">Course page</a></p>
+      <p class="meta">${meta} ${attrs} ${coursePageLink(c, "Course page", "page-link")}</p>
       ${c.desc ? `<p class="desc${isOpen ? "" : " short"}">${highlight(c.desc)}</p>` : ""}
       <ul class="chips">${chips(c)}</ul>
       ${isOpen ? `<div class="detail">

@@ -158,7 +158,7 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
 
     for sub in ("course", "instructor"):
         shutil.rmtree(site / sub, ignore_errors=True)
-        (site / sub).mkdir(parents=True)
+        (site / sub).mkdir(parents=True, exist_ok=True)
 
     # ---------- course pages ----------
     for c in courses:
