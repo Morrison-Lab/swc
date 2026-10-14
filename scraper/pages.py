@@ -15,10 +15,13 @@ import unicodedata
 from collections import defaultdict
 from html import escape
 from pathlib import Path
+from urllib.parse import quote
 
 CATALOG_SEARCH = (
     "https://catalog.wwu.edu/search_advanced.php?cur_cat_oid=23&search_database=Search"
     "&search_db=Search&cpage=1&ecpage=1&ppage=1&spage=1&tpage=1&location=3&filter%5Bkeyword%5D=")
+TEXTBOOKS_URL = "https://bookstore.wwu.edu/buy_textbooks.asp"
+SUGGEST_URL = "https://github.com/Morrison-Lab/swc/issues/new?template=syllabus.yml&course="
 BROWSE_URL = ("https://registration.banner.wwu.edu/StudentRegistrationSsb/ssb/"
               "term/termSelection?mode=search")
 
@@ -175,12 +178,19 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
         else:
             parts.append("    <p>Not offered in the listed terms.</p>")
         links = [f'<a href="{e(CATALOG_SEARCH)}{e(c["id"]).replace(" ", "%20")}">Catalog entry</a>',
-                 f'<a href="{e(BROWSE_URL)}">Browse Classes</a>']
-        for syl in c["syllabi"]:
-            bits = [syl["label"] or "Syllabus", term_names.get(syl["term"], syl["term"]),
-                    syl["instructor"]]
-            links.append(f'<a href="{e(syl["url"])}">{e(" · ".join(b for b in bits if b))}</a>')
+                 f'<a href="{e(BROWSE_URL)}">Browse Classes</a>',
+                 f'<a href="{e(TEXTBOOKS_URL)}">Textbooks (WWU Bookstore)</a>']
         parts.append(f'    <p class="links">{"".join(links)}</p>')
+        syl_links = []
+        for syl in c["syllabi"]:
+            bits = [syl["label"] or "Syllabus", syl.get("termName") or syl["term"],
+                    syl["instructor"]]
+            syl_links.append(f'<a href="{e(syl["url"])}">{e(" · ".join(b for b in bits if b))}</a>')
+        syl_links.append(f'<a href="{e(SUGGEST_URL)}{e(quote(c["id"]))}">Suggest a syllabus link</a>')
+        parts.append("    <h2>Syllabi and course websites</h2>")
+        if not c["syllabi"]:
+            parts.append('    <p class="no-syllabi">None listed yet.</p>')
+        parts.append(f'    <p class="links">{"".join(syl_links)}</p>')
 
         if c["sections"]:
             by_instr = defaultdict(list)

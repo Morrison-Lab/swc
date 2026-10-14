@@ -41,6 +41,14 @@ def credits(low, high) -> str:
     return fmt(low)
 
 
+def term_name(code: str) -> str:
+    """'202040' -> 'Fall 2020', for terms Banner's list no longer has."""
+    season = {"10": "Winter", "20": "Spring", "30": "Summer", "40": "Fall"}
+    if len(code) == 6 and code.isdigit() and code[4:] in season:
+        return f"{season[code[4:]]} {code[:4]}"
+    return code
+
+
 def level(num: str) -> int | None:
     digits = "".join(ch for ch in num if ch.isdigit())
     return int(digits[0]) * 100 if digits else None
@@ -128,9 +136,13 @@ def main() -> None:
                 print(f"warning: syllabi.csv line {n}: no course {key!r}",
                       file=sys.stderr)
                 continue
-            courses[key]["syllabi"].append(
-                {k: (r.get(k) or "").strip() for k in
-                 ("term", "instructor", "url", "label")})
+            syl = {k: (r.get(k) or "").strip() for k in
+                   ("term", "instructor", "url", "label")}
+            syl["termName"] = term_names.get(syl["term"]) or term_name(syl["term"])
+            courses[key]["syllabi"].append(syl)
+
+    for c in courses.values():  # newest term first; undated links last
+        c["syllabi"].sort(key=lambda s: s["term"] or "0", reverse=True)
 
     ordered = sorted(courses.values(), key=lambda c: (c["subj"], c["num"]))
     out = {
