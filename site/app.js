@@ -12,11 +12,23 @@
 
   const $ = (id) => document.getElementById(id);
   const els = {
-    q: $("q"), subj: $("f-subj"), term: $("f-term"), level: $("f-level"),
-    attr: $("f-attr"), method: $("f-method"), instr: $("f-instr"),
+    q: $("q"), instr: $("f-instr"),
     results: $("results"), status: $("status"), more: $("more"),
     reset: $("reset"), instructors: $("instructors"), updated: $("updated"),
   };
+
+  // The checkbox filters (multiselect.js). Picks within one filter match any
+  // of them; different filters must all hold.
+  const ms = {
+    subj: new MultiSelect($("f-subj"), { labelId: "l-subj", all: "All subjects", noun: "subjects", find: true }),
+    term: new MultiSelect($("f-term"), { labelId: "l-term", all: "Any time", noun: "choices", find: true }),
+    level: new MultiSelect($("f-level"), { labelId: "l-level", all: "All levels", noun: "levels" }),
+    attr: new MultiSelect($("f-attr"), { labelId: "l-attr", all: "Any (GUR, writing, ...)", noun: "attributes", find: true }),
+    method: new MultiSelect($("f-method"), { labelId: "l-method", all: "Any delivery", noun: "delivery modes" }),
+  };
+  const FILTERS = Object.keys(ms);
+  // Offered choices other than a term code.
+  const SPECIAL = new Set(["upcoming", "any", "none"]);
 
   let data, byId, search, termName, shown = PAGE, current = [];
   const open = new Set();
@@ -82,11 +94,7 @@
   function readHash() {
     const p = new URLSearchParams(location.hash.slice(1));
     els.q.value = p.get("q") || "";
-    els.subj.value = p.get("subj") || "";
-    els.term.value = p.get("term") || "";
-    els.level.value = p.get("level") || "";
-    els.attr.value = p.get("attr") || "";
-    els.method.value = p.get("method") || "";
+    FILTERS.forEach((k) => { ms[k].values = (p.get(k) || "").split(",").filter(Boolean); });
     els.instr.value = p.get("instr") || "";
     open.clear();
     (p.get("open") || "").split("|").filter(Boolean).forEach((id) => open.add(id));
@@ -96,11 +104,7 @@
     const p = new URLSearchParams();
     const set = (k, v) => v && p.set(k, v);
     set("q", els.q.value.trim());
-    set("subj", els.subj.value);
-    set("term", els.term.value);
-    set("level", els.level.value);
-    set("attr", els.attr.value);
-    set("method", els.method.value);
+    FILTERS.forEach((k) => set(k, ms[k].values.join(",")));
     set("instr", els.instr.value.trim());
     set("open", [...open].join("|"));
     const h = p.toString();
@@ -108,25 +112,30 @@
   }
 
   // ---------- filtering ----------
+  // The term codes picked under Offered.
+  const pickedTerms = () => new Set(ms.term.values.filter((v) => !SPECIAL.has(v)));
+
   function matches(c) {
-    if (els.subj.value && c.subj !== els.subj.value) return false;
-    if (els.level.value && String(c.level) !== els.level.value) return false;
-    const t = els.term.value;
-    const special = t === "any" || t === "none" || t === "upcoming";
-    if (t === "any" && !c.offered.length) return false;
-    if (t === "none" && c.offered.length) return false;
-    if (t === "upcoming" && !c.offered.some((o) => o >= CURRENT_TERM)) return false;
-    if (t && !special && !c.offered.includes(t)) return false;
-    const a = els.attr.value;
-    const m = els.method.value;
+    const subj = ms.subj.values, level = ms.level.values, offered = ms.term.values;
+    if (subj.length && !subj.includes(c.subj)) return false;
+    if (level.length && !level.includes(String(c.level))) return false;
+    const has = (v) => offered.includes(v);
+    const codes = pickedTerms();
+    if (offered.length && !(
+      (has("upcoming") && c.offered.some((o) => o >= CURRENT_TERM)) ||
+      (has("any") && c.offered.length) ||
+      (has("none") && !c.offered.length) ||
+      c.offered.some((o) => codes.has(o)))) return false;
+    const attrs = ms.attr.values, methods = ms.method.values;
     const who = els.instr.value.trim().toLowerCase();
-    if (a || m || who) {
-      // All section-level filters must hold for the same section, and in the
-      // chosen term when one is picked.
+    if (attrs.length || methods.length || who) {
+      // All section-level filters must hold for the same section, and in a
+      // picked term when terms are picked ("any" and "none" pick no term).
+      const anyTerm = !offered.length || has("any") || has("none");
       const ok = c.sections.some((s) =>
-        (t === "upcoming" ? s.term >= CURRENT_TERM : !t || special || s.term === t) &&
-        (!a || s.attrs.includes(a)) &&
-        (!m || s.method === m) &&
+        (anyTerm || (has("upcoming") && s.term >= CURRENT_TERM) || codes.has(s.term)) &&
+        (!attrs.length || s.attrs.some((a) => attrs.includes(a))) &&
+        (!methods.length || methods.includes(s.method)) &&
         (!who || s.instr.some((i) => i.toLowerCase().includes(who))));
       if (!ok) return false;
     }
@@ -180,7 +189,8 @@
     const ran = [...data.terms].reverse().filter((t) => by.has(t.code));
     const ahead = ran.filter((t) => t.code >= CURRENT_TERM);
     const past = ran.filter((t) => t.code < CURRENT_TERM);
-    const keep = past.filter((t, i) => i < PAST_CHIPS || t.code === els.term.value);
+    const picked = pickedTerms();
+    const keep = past.filter((t, i) => i < PAST_CHIPS || picked.has(t.code));
     const out = ahead.map((t) => chip(t, "chip")).concat(keep.map((t) => chip(t, "chip past")));
     if (past.length > keep.length) {
       const n = past.length - keep.length;
@@ -222,7 +232,8 @@
     const past = terms.filter((t) => t.code < CURRENT_TERM);
     let out = ahead.length ? table(ahead) : "<p>Not scheduled this term or later.</p>";
     if (past.length) {
-      const picked = past.some((t) => t.code === els.term.value);
+      const codes = pickedTerms();
+      const picked = past.some((t) => codes.has(t.code));
       out += `<details class="past-terms"${picked ? " open" : ""}><summary>Past terms (${past.length})</summary>${table(past)}</details>`;
     }
     return out;
@@ -277,15 +288,6 @@
   }
 
   // ---------- setup ----------
-  function fillSelect(sel, pairs) {
-    for (const [value, label] of pairs) {
-      const o = document.createElement("option");
-      o.value = value;
-      o.textContent = label;
-      sel.appendChild(o);
-    }
-  }
-
   async function init() {
     if (typeof MiniSearch === "undefined") {
       throw new Error("the search library did not load from cdn.jsdelivr.net");
@@ -302,16 +304,21 @@
     data.courses.forEach((c) => {
       if (!subjects.get(c.subj)) subjects.set(c.subj, c.subjDesc || "");
     });
-    fillSelect(els.subj, [...subjects].map(([k, v]) => [k, v ? `${v} (${k})` : k])
+    ms.subj.setOptions([...subjects].map(([k, v]) => [k, v ? `${v} (${k})` : k])
       .sort((a, b) => a[1].localeCompare(b[1])));
     const levels = [...new Set(data.courses.map((c) => c.level).filter((l) => l !== null))].sort((a, b) => a - b);
-    fillSelect(els.level, levels.map((l) =>
+    ms.level.setOptions(levels.map((l) =>
       [String(l), l === 0 ? "Below 100" : l >= 500 ? `${l} (graduate)` : String(l)]));
-    fillSelect(els.term, [...data.terms].reverse().map((t) => [t.code, t.name]));
+    ms.term.setOptions([
+      ["upcoming", "This term or later"],
+      ["any", "In any listed term"],
+      ["none", "Not in listed terms"],
+      ...[...data.terms].reverse().map((t) => [t.code, t.name]),
+    ]);
     const usedAttrs = new Set(data.courses.flatMap((c) => c.attrs));
-    fillSelect(els.attr, Object.entries(data.attributes).filter(([k]) => usedAttrs.has(k))
+    ms.attr.setOptions(Object.entries(data.attributes).filter(([k]) => usedAttrs.has(k))
       .sort((a, b) => a[1].localeCompare(b[1])));
-    fillSelect(els.method, Object.entries(data.methods));
+    ms.method.setOptions(Object.entries(data.methods));
     const names = new Set();
     data.courses.forEach((c) => c.sections.forEach((s) => s.instr.forEach((i) => names.add(i))));
     els.instructors.innerHTML = [...names].sort().map((n) => `<option value="${esc(n)}">`).join("");
@@ -336,10 +343,10 @@
     let timer;
     els.q.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(run, 150); });
     els.instr.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(run, 150); });
-    [els.subj, els.term, els.level, els.attr, els.method].forEach((e) => e.addEventListener("change", run));
+    FILTERS.forEach((k) => ms[k].root.addEventListener("change", run));
     els.reset.addEventListener("click", () => {
       els.q.value = els.instr.value = "";
-      [els.subj, els.term, els.level, els.attr, els.method].forEach((e) => (e.value = ""));
+      FILTERS.forEach((k) => { ms[k].values = []; });
       open.clear();
       run();
     });
