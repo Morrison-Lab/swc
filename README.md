@@ -10,7 +10,7 @@ and see every section of a course in the loaded terms, with its instructor, meet
 
 | Source | What it gives | How |
 |---|---|---|
-| [Browse Classes](https://registration.banner.wwu.edu/StudentRegistrationSsb/ssb/term/termSelection?mode=search) (Ellucian Banner 9) | Sections for any term back to Fall 2002: instructor, times, rooms, enrollment, delivery, attributes; the course catalog with college, department and descriptions | Public JSON endpoints, no login |
+| [Browse Classes](https://registration.banner.wwu.edu/StudentRegistrationSsb/ssb/term/termSelection?mode=search) (Ellucian Banner 9) | Sections for any term back to Fall 2002: instructor, times, rooms, enrollment, delivery, attributes; the course catalog with college, department, descriptions, prerequisites and corequisites | Public JSON endpoints, no login |
 | [University Catalog](https://catalog.wwu.edu/) (Acalog) | Official course pages | Linked from each course; the site blocks scripted requests, so it is not scraped |
 | [`data/syllabi.csv`](data/syllabi.csv) | Syllabus and course-material links | Curated by hand |
 
@@ -34,7 +34,7 @@ A graduate student who is the instructor of record still appears, as on WWU's ow
 
 ```sh
 pip install requests
-python3 scraper/scrape.py      # sections, catalog, descriptions -> data/raw/
+python3 scraper/scrape.py      # sections, catalog, descriptions, requisites -> data/raw/
 python3 scraper/build.py       # -> site/data/courses.json, site/course/, site/instructor/
 python3 -m http.server -d site 8000
 ```
@@ -42,6 +42,12 @@ python3 -m http.server -d site 8000
 Course descriptions are fetched one at a time, with a pause between requests, and cached in
 `data/raw/descriptions.json`, which is committed, so a run fetches only courses missing from it.
 `--max-descriptions N` caps that for a quick test.
+Prerequisites and corequisites work the same way, cached in the committed `data/raw/requisites.json`
+(`--max-requisites N`); a course in the catalog is looked up in the newest term, and one that has
+left it in the last term it was offered. Banner lists only the requisites it enforces, and they can
+change from year to year, so rerun with `--refresh-requisites` and commit the file now and then.
+A full download takes a few hours, so the daily workflow looks up at most 1,500 new courses a run
+(`--max-requisites 1500`) and the seed is refreshed locally.
 
 ## Publishing
 
@@ -88,6 +94,7 @@ a suggestion becomes a row here once someone checks the page.
 ## Layout
 
 - [`scraper/scrape.py`](scraper/scrape.py): downloads from Banner into `data/raw/`
-- [`scraper/build.py`](scraper/build.py): merges sections, catalog, descriptions and syllabi into one index
-- [`scraper/pages.py`](scraper/pages.py): writes a static page per course (every section it has had in the listed terms, and who taught it) and per instructor (every course and section they taught in those terms), plus an instructor list; instructors are matched by the name Banner shows
+- [`scraper/build.py`](scraper/build.py): merges sections, catalog, descriptions, requisites and syllabi into one index
+- [`scraper/requisites.py`](scraper/requisites.py): turns Banner's prerequisite and corequisite rows into course links, and finds the courses that require each course
+- [`scraper/pages.py`](scraper/pages.py): writes a static page per course (its prerequisites and corequisites, the courses that require it, each as a list and a tree, every section it has had in the listed terms, and who taught it) and per instructor (every course and section they taught in those terms), plus an instructor list; instructors are matched by the name Banner shows
 - [`site/`](site/): static page (`index.html`, `app.js`, `style.css`) searching the index in the browser with [MiniSearch](https://lucaong.github.io/minisearch/); `multiselect.js`, the checkbox dropdowns for the filters (picks within one filter match any of them, Attribute can be switched to match all, and the filters combine); and `theme.js`, the lab sites' Light / Off-white / Parchment / Dark theme menu (the choice is shared with them under `mln-theme`)

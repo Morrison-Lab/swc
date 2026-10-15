@@ -25,6 +25,6 @@ jobs:
         with:
           python-version: "3.13"
       - name: Compile scripts
-        run: python3 -m py_compile scraper/scrape.py scraper/build.py scraper/pages.py
+        run: python3 -m py_compile scraper/scrape.py scraper/build.py scraper/pages.py scraper/requisites.py
       - name: Build the index from committed data
         run: python3 scraper/build.py

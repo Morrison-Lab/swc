@@ -63,6 +63,31 @@
     return slug ? `<a${cls ? ` class="${cls}"` : ""} href="course/${encodeURIComponent(slug)}.html"` +
       ` aria-label="${esc(`${text} for ${c.id}`)}">${esc(text)}</a>` : "";
   };
+  // A course named in a prerequisite: a link to its page when it has one.
+  const reqLink = (t) => {
+    if (!t.id) return esc(t.text || "");  // no text: a grouping-only term
+    const slug = data.pages?.courses?.[t.id];
+    return slug ? `<a href="course/${encodeURIComponent(slug)}.html">${esc(t.id)}</a>` : esc(t.id);
+  };
+  // Banner's prerequisite terms as one line, as on the course page; C- is the
+  // usual minimum grade, so only other minimums are shown.
+  const reqText = (items) => items.map((t, i) => {
+    const word = i && t.op ? `${esc(t.op)} ` : "";
+    const grade = t.grade && t.grade !== "C-" ? ` (minimum grade ${esc(t.grade)})` : "";
+    return `${word}${"(".repeat(t.open)}${reqLink(t)}${grade}${")".repeat(t.close)}`;
+  }).join(" ").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
+
+  function requisites(c) {
+    if (!c.pre) return "";  // a courses.json from before requisites were added
+    const out = [`<h3>Prerequisites</h3><p class="reqs">${c.pre.length ? reqText(c.pre) : c.preTerm ? "None that Banner enforces." : "Not downloaded from Banner yet."}</p>`];
+    if (c.co.length) out.push(`<h3>Corequisites</h3><p class="reqs">${c.co.map(reqLink).join(", ")}</p>`);
+    if (c.requiredBy.length) {
+      const n = c.requiredBy.length;
+      out.push(`<p class="reqs">Required by ${n} course${n === 1 ? "" : "s"}: ${c.requiredBy.map((id) => reqLink({ id })).join(", ")}</p>`);
+    }
+    return out.join("");
+  }
+
   const instrLink = (n, text = n) => {
     const slug = data.pages?.instructors?.[n];
     return slug ? `<a href="instructor/${encodeURIComponent(slug)}.html">${esc(text)}</a>` : esc(text);
@@ -281,6 +306,7 @@
       <ul class="chips">${chips(c)}</ul>
       ${isOpen ? `<div class="detail">
         <h3>Sections</h3>${sectionsTable(c)}
+        ${requisites(c)}
         <div class="links">${links(c)}</div>
         <h3>Syllabi and course websites</h3>
         ${c.syllabi.length ? "" : `<p class="no-syllabi">None listed yet.</p>`}

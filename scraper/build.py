@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Build the explorer's search index from the files scrape.py downloads.
 
-Reads data/raw/ (terms, sections, catalog, descriptions, attributes) and
+Reads data/raw/ (terms, sections, catalog, descriptions, attributes,
+requisites) and
 data/syllabi.csv, and writes site/data/courses.json: one record per course,
 with its catalog details and every section in the downloaded terms. It also
 writes a page per course and per instructor (pages.py).
@@ -21,6 +22,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from pages import write_pages
+from requisites import add_requisites
 
 ROOT = Path(__file__).resolve().parent.parent
 RAW = ROOT / "data" / "raw"
@@ -147,6 +149,8 @@ def main() -> None:
 
     for c in courses.values():  # newest term first; undated links last
         c["syllabi"].sort(key=lambda s: s["term"] or "0", reverse=True)
+
+    add_requisites(courses, load(RAW / "requisites.json", {}))
 
     ordered = sorted(courses.values(), key=lambda c: (c["subj"], c["num"]))
     out = {

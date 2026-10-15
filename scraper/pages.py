@@ -124,6 +124,58 @@ def span(codes: list[str], term_names: dict[str, str]) -> str:
     return f"{term_names.get(first, first)} to {term_names.get(last, last)}"
 
 
+def requisite_text(items: list[dict], link) -> str:
+    """Banner's prerequisite terms as one line: 'CSCI 145 and (MATH 124 or ...)'.
+
+    link(id) renders a course reference; terms Banner names but the explorer
+    has no record of stay plain text. C- is Banner's usual minimum grade, so
+    only other minimums are spelled out.
+    """
+    out = []
+    for i, t in enumerate(items):
+        word = f'{e(t["op"])} ' if i and t["op"] else ""
+        name = link(t["id"]) if "id" in t else e(t.get("text", ""))
+        grade = f' (minimum grade {e(t["grade"])})' if t["grade"] and t["grade"] != "C-" else ""
+        out.append(f'{word}{"(" * t["open"]}{name}{grade}{")" * t["close"]}')
+    # Grouping-only terms leave "( (" and "x )" behind; close them up.
+    return re.sub(r"\s+\)", ")", re.sub(r"\(\s+", "(", " ".join(out)))
+
+
+TREE_DEPTH = 6  # prerequisite chains rarely run deeper
+LEADS_DEPTH = 2  # what a course leads to fans out fast
+
+
+def tree(root: str, children, label, depth: int, short=None) -> str:
+    """A nested list of `root`'s children, depth-first.
+
+    Each course is expanded where it first appears, with label(); a later
+    appearance at the same depth or deeper gets short() (label() if not
+    given) and says so instead of repeating the branch. One that turns up
+    higher than before is expanded again, so the depth limit never hides
+    a branch that a repeat points to.
+    """
+    short = short or label
+    seen = {root: 0}  # course -> shallowest level it was expanded at
+
+    def walk(key: str, level: int) -> str:
+        items = []
+        for k in children(key):
+            if k == root:
+                items.append(f"<li>{short(k)} <small>(this course)</small></li>")
+                continue
+            if k in seen and seen[k] <= level:
+                items.append(f"<li>{short(k)} <small>(shown above)</small></li>")
+                continue
+            seen[k] = level
+            sub_list = walk(k, level + 1) if level < depth else ""
+            more = (" <small>(continues on its page)</small>"
+                    if level >= depth and children(k) else "")
+            items.append(f"<li>{label(k)}{more}{sub_list}</li>")
+        return f"<ul>{''.join(items)}</ul>" if items else ""
+
+    return walk(root, 1)
+
+
 def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]:
     """Write site/course/*.html and site/instructor/*.html.
 
@@ -139,6 +191,7 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
             for name in s["instr"]:
                 taught[name].append((c, s))
 
+    by_id = {c["id"]: c for c in courses}
     course_slug = unique_slugs([c["id"] for c in courses], lower=False)
     instr_slug = unique_slugs(taught, lower=True)
 
@@ -181,6 +234,36 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                  f'<a href="{e(BROWSE_URL)}">Browse Classes</a>',
                  f'<a href="{e(TEXTBOOKS_URL)}">Textbooks (WWU Bookstore)</a>']
         parts.append(f'    <p class="links">{"".join(links)}</p>')
+        page_link = lambda k: course_link(by_id[k])  # noqa: E731
+        titled = lambda k: f'{page_link(k)} <small>{e(by_id[k]["title"])}</small>'  # noqa: E731
+        # In the prerequisite tree, each course also says how its own
+        # prerequisites combine, since its branch lists them without and/or.
+        needs = lambda k: titled(k) + (  # noqa: E731
+            f'<br><small>requires {requisite_text(by_id[k]["pre"], e)}</small>'
+            if by_id[k]["pre"] else "")
+        req_term = term_names.get(c["preTerm"]) or c["preTerm"]
+        parts.append("    <h2>Prerequisites</h2>")
+        if c["pre"]:
+            parts.append(f'    <p class="reqs">{requisite_text(c["pre"], page_link)}</p>')
+            parts.append(f'    <details class="req-tree"><summary>Prerequisite tree</summary>'
+                         f'<p><small>Each course\'s own prerequisites, down to the first courses in the chain.</small></p>'
+                         f'{tree(c["id"], lambda k: [t["id"] for t in by_id[k]["pre"] if "id" in t and t["id"] != k], needs, TREE_DEPTH, titled)}</details>')
+        else:
+            parts.append(f'    <p class="no-reqs">{"None that Banner enforces." if c["preTerm"] else "Not downloaded from Banner yet."}</p>')
+        if c["co"]:
+            parts.append("    <h2>Corequisites</h2>")
+            parts.append(f'    <p class="reqs">{", ".join(page_link(t["id"]) if "id" in t else e(t["text"]) for t in c["co"])}</p>')
+        if req_term:
+            parts.append(f'    <p><small>From Banner\'s catalog for {e(req_term)}. Banner lists only the requisites it enforces, '
+                         'so check the catalog entry too.</small></p>')
+        parts.append(f'    <h2>Required by ({len(c["requiredBy"])})</h2>')
+        if c["requiredBy"]:
+            parts.append(f'    <p class="reqs">{", ".join(page_link(k) for k in c["requiredBy"])}</p>')
+            parts.append(f'    <details class="req-tree"><summary>What it leads to</summary>'
+                         f'<p><small>Courses that list it as a prerequisite, then the courses that list those, {LEADS_DEPTH} levels deep.</small></p>'
+                         f'{tree(c["id"], lambda k: by_id[k]["requiredBy"], titled, LEADS_DEPTH)}</details>')
+        else:
+            parts.append('    <p class="no-reqs">No course lists it as a prerequisite.</p>')
         syl_links = []
         for syl in c["syllabi"]:
             bits = [syl["label"] or "Syllabus", syl.get("termName") or syl["term"],

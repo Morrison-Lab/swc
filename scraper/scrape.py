@@ -9,7 +9,10 @@ JSON endpoints that need no login. This script pulls:
   to Fall 2002), trimmed to the fields the explorer uses, into
   data/raw/sections/<term>.json;
 * the course catalog for the newest term into data/raw/catalog.json;
-* full course descriptions into data/raw/descriptions.json.
+* full course descriptions into data/raw/descriptions.json;
+* each course's catalog prerequisites and corequisites into
+  data/raw/requisites.json, as of the newest term for courses in the catalog
+  and of the last term offered for courses that have left it.
 
 Banner's public search returns no student records beyond section-level
 enrollment counts. Only each section's primary instructor (instructor of
@@ -126,6 +129,40 @@ class Banner:
                          data={"term": term, "subjectCode": subj,
                                "courseNumber": num})
         return clean_html(text)
+
+    def requisites(self, term: str, subj: str, num: str) -> dict:
+        """A course's catalog prerequisite and corequisite rows.
+
+        Prerequisite rows are [and/or, "(", test, score, subject, number,
+        level, grade, ")"], in Banner's order; corequisite rows are
+        [subject, number, title]. Subjects are Banner's names ("Computer
+        Science"), not codes.
+        """
+        data = {"term": term, "subjectCode": subj, "courseNumber": num}
+        pre = self._req("POST", "courseSearchResults/getPrerequisites", data=data)
+        co = self._req("POST", "courseSearchResults/getCorequisites", data=data)
+        # An unexpected page (a lost session, an error page) would otherwise
+        # read as "no requisites".
+        if 'aria-labelledby="preReqs"' not in pre or 'aria-labelledby="coReqs"' not in co:
+            raise RuntimeError("unexpected requisites page")
+        rows = {"pre": table_rows(pre), "co": table_rows(co)}
+        # A table whose rows no longer parse (changed markup) must not be
+        # stored as "none".
+        for k, text in (("pre", pre), ("co", co)):
+            if "<table" in text and not rows[k]:
+                raise RuntimeError(f"could not read the {k}requisites table")
+        return {"term": term, **rows}
+
+
+def table_rows(text: str) -> list[list[str]]:
+    """The <td> text of each body row of every table in `text`."""
+    rows = []
+    for body in re.findall(r"<tbody[^>]*>(.*?)</tbody>", text, re.S):
+        for row in re.findall(r"<tr[^>]*>(.*?)</tr>", body, re.S):
+            cells = [clean_html(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
+            if any(cells):
+                rows.append(cells)
+    return rows
 
 
 def clean_html(text: str) -> str:
@@ -269,6 +306,45 @@ def scrape_catalog(args, terms: list[dict]) -> None:
     dump_json(desc_path, dict(sorted(descs.items())))
 
 
+def scrape_requisites(args, terms: list[dict]) -> None:
+    """Fetch prerequisites and corequisites for courses that lack them.
+
+    Courses in the catalog are looked up in the newest term, as the catalog
+    is; courses that have left it, in the last term they were offered, since
+    Banner may list none for them now.
+    """
+    when = {}  # course -> term to look it up in
+    for path in sorted(SECTIONS.glob("*.json")):  # oldest first
+        for s in load_json(path, []):
+            when[f"{s['subj']} {s['num']}"] = path.stem
+    newest = terms[0]["code"]
+    for c in load_json(RAW / "catalog.json", []):
+        when[f"{c['subj']} {c['num']}"] = newest
+    req_path = RAW / "requisites.json"
+    reqs = load_json(req_path, {})
+    # Newest term first, so new catalog courses come before old ones that
+    # keep failing, within --max-requisites.
+    todo = sorted(((t, k) for k, t in when.items()
+                   if args.refresh_requisites or k not in reqs), reverse=True)
+    if args.max_requisites is not None:
+        todo = todo[:args.max_requisites]
+    b, selected = Banner(args.delay), None
+    for i, (term, key) in enumerate(todo, 1):
+        subj, num = key.rsplit(" ", 1)  # some subjects have spaces ("I T")
+        try:
+            if term != selected:
+                b.select_term(term, "courseSearch")
+                selected = term
+            reqs[key] = b.requisites(term, subj, num)
+        except RuntimeError as e:
+            print(f"  {key}: {e}", file=sys.stderr)
+            selected = None  # in case the session was lost; select again
+        if i % 200 == 0:
+            dump_json(req_path, dict(sorted(reqs.items())))
+            print(f"  requisites {i}/{len(todo)}", file=sys.stderr)
+    dump_json(req_path, dict(sorted(reqs.items())))
+
+
 def term_code(value: str) -> str:
     if not re.fullmatch(r"\d{4}[1-4]0", value):
         raise argparse.ArgumentTypeError(
@@ -292,6 +368,9 @@ def main() -> None:
     p.add_argument("--skip-catalog", action="store_true")
     p.add_argument("--refresh-descriptions", action="store_true")
     p.add_argument("--max-descriptions", type=int)
+    p.add_argument("--refresh-requisites", action="store_true",
+                   help="re-download every course's prerequisites and corequisites")
+    p.add_argument("--max-requisites", type=int)
     p.add_argument("--delay", type=float, default=0.3,
                    help="seconds to wait between requests (default 0.3)")
     args = p.parse_args()
@@ -301,6 +380,7 @@ def main() -> None:
         terms = scrape_terms(args)
     if not args.skip_catalog:
         scrape_catalog(args, terms)
+        scrape_requisites(args, terms)
     # Fail only after everything else is saved, so one suspicious term doesn't
     # block the rest of the refresh.
     if getattr(args, "kept_old", None):
