@@ -21,10 +21,12 @@ def add_requisites(courses: dict[str, dict], reqs: dict[str, dict]) -> None:
     {"id"} or {"text"}. A course Banner names that the explorer has no record
     of keeps its name as text.
     """
-    codes = {}  # subject name -> code
+    names = defaultdict(set)  # subject name -> codes
     for c in courses.values():
         if c["subjDesc"]:
-            codes.setdefault(c["subjDesc"].casefold(), c["subj"])
+            names[c["subjDesc"].casefold()].add(c["subj"])
+    # A name two subjects share can't be resolved; such references stay text.
+    codes = {n: next(iter(s)) for n, s in names.items() if len(s) == 1}
 
     def ref(subject: str, num: str) -> dict:
         code = codes.get(subject.casefold())

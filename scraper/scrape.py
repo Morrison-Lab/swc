@@ -145,14 +145,20 @@ class Banner:
         # read as "no requisites".
         if 'aria-labelledby="preReqs"' not in pre or 'aria-labelledby="coReqs"' not in co:
             raise RuntimeError("unexpected requisites page")
-        return {"term": term, "pre": table_rows(pre), "co": table_rows(co)}
+        rows = {"pre": table_rows(pre), "co": table_rows(co)}
+        # A table whose rows no longer parse (changed markup) must not be
+        # stored as "none".
+        for k, text in (("pre", pre), ("co", co)):
+            if "<table" in text and not rows[k]:
+                raise RuntimeError(f"could not read the {k}requisites table")
+        return {"term": term, **rows}
 
 
 def table_rows(text: str) -> list[list[str]]:
     """The <td> text of each body row of every table in `text`."""
     rows = []
-    for body in re.findall(r"<tbody>(.*?)</tbody>", text, re.S):
-        for row in re.findall(r"<tr>(.*?)</tr>", body, re.S):
+    for body in re.findall(r"<tbody[^>]*>(.*?)</tbody>", text, re.S):
+        for row in re.findall(r"<tr[^>]*>(.*?)</tr>", body, re.S):
             cells = [clean_html(c) for c in re.findall(r"<td[^>]*>(.*?)</td>", row, re.S)]
             if any(cells):
                 rows.append(cells)
@@ -316,8 +322,10 @@ def scrape_requisites(args, terms: list[dict]) -> None:
         when[f"{c['subj']} {c['num']}"] = newest
     req_path = RAW / "requisites.json"
     reqs = load_json(req_path, {})
-    todo = sorted((t, k) for k, t in when.items()
-                  if args.refresh_requisites or k not in reqs)
+    # Newest term first, so new catalog courses come before old ones that
+    # keep failing, within --max-requisites.
+    todo = sorted(((t, k) for k, t in when.items()
+                   if args.refresh_requisites or k not in reqs), reverse=True)
     if args.max_requisites is not None:
         todo = todo[:args.max_requisites]
     b, selected = Banner(args.delay), None
