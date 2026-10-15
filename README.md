@@ -46,7 +46,8 @@ Prerequisites and corequisites work the same way, cached in the committed `data/
 (`--max-requisites N`); a course in the catalog is looked up in the newest term, and one that has
 left it in the last term it was offered. Banner lists only the requisites it enforces, and they can
 change from year to year, so rerun with `--refresh-requisites` and commit the file now and then.
-A full download takes a few hours.
+A full download takes a few hours, so the daily workflow looks up at most 1,500 new courses a run
+(`--max-requisites 1500`) and the seed is refreshed locally.
 
 ## Publishing
 

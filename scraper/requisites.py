@@ -16,7 +16,8 @@ def add_requisites(courses: dict[str, dict], reqs: dict[str, dict]) -> None:
 
     pre is a list of terms in Banner's order, each
     {"op": "and" | "or" | "", "open": n, "close": n, "id" or "text", "grade"},
-    where open and close count the parentheses around it. co is a list of
+    where open and close count the parentheses around it; a term with
+    neither id nor text only carries Banner's grouping. co is a list of
     {"id"} or {"text"}. A course Banner names that the explorer has no record
     of keeps its name as text.
     """
@@ -46,6 +47,8 @@ def add_requisites(courses: dict[str, dict], reqs: dict[str, dict]) -> None:
             elif test:
                 # "Y" marks a pass/fail clearance rather than a score.
                 item = {"text": f"{test}, score {score}" if score and score != "Y" else test}
+            elif op or open_ or close:
+                item = {}  # grouping only: Banner's and/or and parentheses
             else:
                 continue
             item.update(op=op.lower(), open=open_.count("("), close=close.count(")"),

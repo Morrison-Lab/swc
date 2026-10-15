@@ -133,11 +133,12 @@ def requisite_text(items: list[dict], link) -> str:
     """
     out = []
     for i, t in enumerate(items):
-        word = f'{t["op"]} ' if i and t["op"] else ""
-        name = link(t["id"]) if "id" in t else e(t["text"])
+        word = f'{e(t["op"])} ' if i and t["op"] else ""
+        name = link(t["id"]) if "id" in t else e(t.get("text", ""))
         grade = f' (minimum grade {e(t["grade"])})' if t["grade"] and t["grade"] != "C-" else ""
         out.append(f'{word}{"(" * t["open"]}{name}{grade}{")" * t["close"]}')
-    return " ".join(out)
+    # Grouping-only terms leave "( (" and "x )" behind; close them up.
+    return re.sub(r"\s+\)", ")", re.sub(r"\(\s+", "(", " ".join(out)))
 
 
 TREE_DEPTH = 6  # prerequisite chains rarely run deeper
@@ -147,20 +148,25 @@ LEADS_DEPTH = 2  # what a course leads to fans out fast
 def tree(root: str, children, label, depth: int, short=None) -> str:
     """A nested list of `root`'s children, depth-first.
 
-    Each course is expanded once, where it first appears, with label(); later
-    appearances get short() (label() if not given) and say so instead of
-    repeating the branch.
+    Each course is expanded where it first appears, with label(); a later
+    appearance at the same depth or deeper gets short() (label() if not
+    given) and says so instead of repeating the branch. One that turns up
+    higher than before is expanded again, so the depth limit never hides
+    a branch that a repeat points to.
     """
     short = short or label
-    seen = {root}
+    seen = {root: 0}  # course -> shallowest level it was expanded at
 
     def walk(key: str, level: int) -> str:
         items = []
         for k in children(key):
-            if k in seen:
+            if k == root:
+                items.append(f"<li>{short(k)} <small>(this course)</small></li>")
+                continue
+            if k in seen and seen[k] <= level:
                 items.append(f"<li>{short(k)} <small>(shown above)</small></li>")
                 continue
-            seen.add(k)
+            seen[k] = level
             sub_list = walk(k, level + 1) if level < depth else ""
             more = (" <small>(continues on its page)</small>"
                     if level >= depth and children(k) else "")
@@ -243,7 +249,7 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                          f'<p><small>Each course\'s own prerequisites, down to the first courses in the chain.</small></p>'
                          f'{tree(c["id"], lambda k: [t["id"] for t in by_id[k]["pre"] if "id" in t and t["id"] != k], needs, TREE_DEPTH, titled)}</details>')
         else:
-            parts.append('    <p class="no-reqs">None that Banner enforces.</p>')
+            parts.append(f'    <p class="no-reqs">{"None that Banner enforces." if c["preTerm"] else "Not downloaded from Banner yet."}</p>')
         if c["co"]:
             parts.append("    <h2>Corequisites</h2>")
             parts.append(f'    <p class="reqs">{", ".join(page_link(t["id"]) if "id" in t else e(t["text"]) for t in c["co"])}</p>')

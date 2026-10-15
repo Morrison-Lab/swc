@@ -322,14 +322,15 @@ def scrape_requisites(args, terms: list[dict]) -> None:
         todo = todo[:args.max_requisites]
     b, selected = Banner(args.delay), None
     for i, (term, key) in enumerate(todo, 1):
-        if term != selected:
-            b.select_term(term, "courseSearch")
-            selected = term
         subj, num = key.rsplit(" ", 1)  # some subjects have spaces ("I T")
         try:
+            if term != selected:
+                b.select_term(term, "courseSearch")
+                selected = term
             reqs[key] = b.requisites(term, subj, num)
         except RuntimeError as e:
             print(f"  {key}: {e}", file=sys.stderr)
+            selected = None  # in case the session was lost; select again
         if i % 200 == 0:
             dump_json(req_path, dict(sorted(reqs.items())))
             print(f"  requisites {i}/{len(todo)}", file=sys.stderr)

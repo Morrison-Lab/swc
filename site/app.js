@@ -65,21 +65,21 @@
   };
   // A course named in a prerequisite: a link to its page when it has one.
   const reqLink = (t) => {
-    if (!t.id) return esc(t.text);
+    if (!t.id) return esc(t.text || "");  // no text: a grouping-only term
     const slug = data.pages?.courses?.[t.id];
     return slug ? `<a href="course/${encodeURIComponent(slug)}.html">${esc(t.id)}</a>` : esc(t.id);
   };
   // Banner's prerequisite terms as one line, as on the course page; C- is the
   // usual minimum grade, so only other minimums are shown.
   const reqText = (items) => items.map((t, i) => {
-    const word = i && t.op ? `${t.op} ` : "";
+    const word = i && t.op ? `${esc(t.op)} ` : "";
     const grade = t.grade && t.grade !== "C-" ? ` (minimum grade ${esc(t.grade)})` : "";
     return `${word}${"(".repeat(t.open)}${reqLink(t)}${grade}${")".repeat(t.close)}`;
-  }).join(" ");
+  }).join(" ").replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
 
   function requisites(c) {
     if (!c.pre) return "";  // a courses.json from before requisites were added
-    const out = [`<h3>Prerequisites</h3><p class="reqs">${c.pre.length ? reqText(c.pre) : "None that Banner enforces."}</p>`];
+    const out = [`<h3>Prerequisites</h3><p class="reqs">${c.pre.length ? reqText(c.pre) : c.preTerm ? "None that Banner enforces." : "Not downloaded from Banner yet."}</p>`];
     if (c.co.length) out.push(`<h3>Corequisites</h3><p class="reqs">${c.co.map(reqLink).join(", ")}</p>`);
     if (c.requiredBy.length) {
       const n = c.requiredBy.length;
