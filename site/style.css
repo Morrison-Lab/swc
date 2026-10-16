@@ -90,6 +90,7 @@ a { color: var(--accent); }
 .top .wrap { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .top h1 { margin: 0; font-size: 1.6rem; }
 .top .sub { margin: 4px 0 0; opacity: .9; }
+.top-tools { display: flex; align-items: center; gap: 4px; flex: none; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
 .search { margin: 20px 0 8px; }
@@ -192,15 +193,15 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; }
   border-radius: 8px; background: var(--panel); color: var(--fg); cursor: pointer; font-size: 1rem; }
 .foot { color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); margin-top: 24px; padding-top: 12px; padding-bottom: 24px; }
 
-/* Theme picker (theme.js). */
+/* Header icons: the GitHub link and the theme picker (theme.js). */
 .theme-picker { position: relative; flex: none; }
-.theme-button {
+.theme-button, .top-icon {
   display: flex; align-items: center; justify-content: center;
   width: 36px; height: 36px; border: 0; border-radius: 6px;
   background: transparent; color: var(--top-fg); cursor: pointer;
 }
-.theme-button:hover, .theme-button[aria-expanded="true"] { background: rgba(255, 255, 255, .15); }
-.theme-button:focus-visible { outline: 2px solid var(--top-fg); outline-offset: 2px; }
+.theme-button:hover, .theme-button[aria-expanded="true"], .top-icon:hover { background: rgba(255, 255, 255, .15); }
+.theme-button:focus-visible, .top-icon:focus-visible { outline: 2px solid var(--top-fg); outline-offset: 2px; }
 .theme-menu {
   position: absolute; right: 0; top: calc(100% + 4px); z-index: 10;
   min-width: 140px; margin: 0; padding: 4px 0; list-style: none;
