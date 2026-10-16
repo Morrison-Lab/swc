@@ -4,7 +4,8 @@
 Reads data/raw/ (terms, sections, catalog, descriptions, attributes,
 requisites) and
 data/syllabi.csv, and writes site/data/courses.json: one record per course,
-with its catalog details and every section in the downloaded terms. It also
+with its catalog details and every section in the downloaded terms, linked
+to the other codes the same course is listed under (crosslist.py). It also
 writes a page per course and per instructor (pages.py).
 
 Usage:
@@ -21,6 +22,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
+from crosslist import link_courses
 from pages import write_pages
 from requisites import add_requisites
 
@@ -108,6 +110,7 @@ def main() -> None:
                 # downloaded before scrape.py unescaped them still are.
                 "instr": [html.unescape(i) for i in s["instr"]], "mtg": s["mtg"],
                 "enr": s["enr"], "max": s["max"], "attrs": s["attrs"],
+                "xlist": s.get("xlist"),  # crosslist.py reads and drops it
             })
 
     for key, codes in course_attrs.items():
@@ -150,6 +153,7 @@ def main() -> None:
     for c in courses.values():  # newest term first; undated links last
         c["syllabi"].sort(key=lambda s: s["term"] or "0", reverse=True)
 
+    groups = link_courses(courses)
     add_requisites(courses, load(RAW / "requisites.json", {}))
 
     ordered = sorted(courses.values(), key=lambda c: (c["subj"], c["num"]))
@@ -171,7 +175,8 @@ def main() -> None:
     print(f"{len(ordered)} courses, {n_sections} sections, "
           f"{len(loaded_terms)} terms -> {OUT.relative_to(ROOT)} "
           f"({OUT.stat().st_size / 1e6:.1f} MB), {len(course_pages)} course and "
-          f"{len(instr_pages)} instructor pages")
+          f"{len(instr_pages)} instructor pages; {len(groups)} courses "
+          f"listed under more than one code")
 
 
 if __name__ == "__main__":
