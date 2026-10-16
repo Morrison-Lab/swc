@@ -9,6 +9,7 @@ with the same name share a page.
 
 from __future__ import annotations
 
+import json
 import re
 import shutil
 import unicodedata
@@ -71,7 +72,7 @@ def meeting_text(m: list) -> str:
     return f"{when} · {where}" if where else when
 
 
-def page(title: str, description: str, body: str) -> str:
+def page(title: str, description: str, body: str, scripts: str = "") -> str:
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -105,7 +106,7 @@ def page(title: str, description: str, body: str) -> str:
       <a href="https://github.com/Morrison-Lab/swc">Source</a>.
     </p>
   </footer>
-</body>
+{scripts}</body>
 </html>
 """
 
@@ -142,35 +143,87 @@ def requisite_text(items: list[dict], link) -> str:
 
 
 TREE_DEPTH = 6  # prerequisite chains rarely run deeper
-LEADS_DEPTH = 2  # what a course leads to fans out fast
+LEADS_DEPTH = 3  # what a course leads to fans out fast
 
 
-def tree(root: str, children, label, depth: int, short=None) -> str:
-    """A nested list of `root`'s children, depth-first.
+def tree(root: str, children, label, link, depth: int, short=None, *, anchor: str,
+         also: str, converge: bool = False, open_levels: int = 99, count: str = "") -> str:
+    """A foldable nested list of the courses within `depth` steps of `root`.
 
-    Each course is expanded where it first appears, with label(); a later
-    appearance at the same depth or deeper gets short() (label() if not
-    given) and says so instead of repeating the branch. One that turns up
-    higher than before is expanded again, so the depth limit never hides
-    a branch that a repeat points to.
+    Courses form a graph, not a tree: two branches can lead to the same
+    course. Each course is expanded once, with label(), under the first
+    parent that reaches it in the fewest steps, or with `converge`, under the
+    parent on its longest path from `root`, so it sits where the last of its
+    branches arrives. Its other parents list it with short() (label() if not
+    given) and a link to that place, and the expanded entry names them after
+    `also` ("also requires ..."), so the branches can be seen converging.
+    A course with branches of its own is a <details> element, open on the
+    first `open_levels` levels, its label followed by `count` with the
+    number of branches filled in; `anchor` prefixes the entries' ids.
     """
     short = short or label
-    seen = {root: 0}  # course -> shallowest level it was expanded at
+    # Breadth-first out to `depth`; every edge out of a course short of the
+    # limit is kept.
+    steps, home = {root: 0}, {}
+    out, parents = defaultdict(list), defaultdict(list)
+    queue = [root]
+    for k in queue:  # grows as it goes
+        if steps[k] >= depth:
+            continue
+        for c in children(k):
+            out[k].append(c)
+            if c != root:
+                parents[c].append(k)
+            if c not in steps:
+                steps[c], home[c] = steps[k] + 1, k
+                queue.append(c)
+    if converge:
+        # A topological order from a depth-first walk, which ignores the
+        # edges that close a cycle; then each course's longest path.
+        order, seen, stack = [], {root}, [(root, iter(out[root]))]
+        while stack:
+            k, it = stack[-1]
+            c = next(it, None)
+            if c is None:
+                stack.pop()
+                order.append(k)
+            elif c not in seen:
+                seen.add(c)
+                stack.append((c, iter(out[c])))
+        order.reverse()
+        rank = {k: i for i, k in enumerate(order)}
+        longest = {root: 0}
+        for k in order:
+            for c in out[k]:
+                if rank[c] > rank[k] and longest[k] + 1 > longest.get(c, -1):
+                    longest[c], home[c] = longest[k] + 1, k
+
+    def ident(k: str) -> str:
+        return f"{anchor}-{slugify(k)}"
 
     def walk(key: str, level: int) -> str:
         items = []
-        for k in children(key):
+        for k in out[key]:
             if k == root:
                 items.append(f"<li>{short(k)} <small>(this course)</small></li>")
                 continue
-            if k in seen and seen[k] <= level:
-                items.append(f"<li>{short(k)} <small>(shown above)</small></li>")
+            if home[k] != key:
+                where = "" if home[k] == root else f" under {e(home[k])}"
+                items.append(f'<li>{short(k)} <small>(<a href="#{ident(k)}">listed in full</a>'
+                             f"{where})</small></li>")
                 continue
-            seen[k] = level
-            sub_list = walk(k, level + 1) if level < depth else ""
-            more = (" <small>(continues on its page)</small>"
-                    if level >= depth and children(k) else "")
-            items.append(f"<li>{label(k)}{more}{sub_list}</li>")
+            others = [p for p in parents[k] if p != key]
+            note = (f'<br><small class="also">{also} {", ".join(link(p) for p in others)}</small>'
+                    if others else "")
+            sub_list = walk(k, level + 1)
+            if sub_list:
+                n = f' <small>({count.format(len(out[k]))})</small>' if count else ""
+                items.append(f'<li id="{ident(k)}"><details{" open" if level <= open_levels else ""}>'
+                             f"<summary>{label(k)}{n}{note}</summary>{sub_list}</details></li>")
+            else:
+                more = (" <small>(continues on its page)</small>"
+                        if steps[k] >= depth and children(k) else "")
+                items.append(f'<li id="{ident(k)}">{label(k)}{more}{note}</li>')
         return f"<ul>{''.join(items)}</ul>" if items else ""
 
     return walk(root, 1)
@@ -192,6 +245,13 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                 taught[name].append((c, s))
 
     by_id = {c["id"]: c for c in courses}
+
+    def pre_ids(k: str) -> list[str]:
+        """The courses `k`'s prerequisites name, once each, in Banner's order."""
+        return list(dict.fromkeys(t["id"] for t in by_id[k]["pre"] if "id" in t and t["id"] != k))
+
+    def graph_ids(c: dict) -> bool:
+        return bool(pre_ids(c["id"]) or c["requiredBy"])
     course_slug = unique_slugs([c["id"] for c in courses], lower=False)
     instr_slug = unique_slugs(taught, lower=True)
 
@@ -246,8 +306,10 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
         if c["pre"]:
             parts.append(f'    <p class="reqs">{requisite_text(c["pre"], page_link)}</p>')
             parts.append(f'    <details class="req-tree"><summary>Prerequisite tree</summary>'
-                         f'<p><small>Each course\'s own prerequisites, down to the first courses in the chain.</small></p>'
-                         f'{tree(c["id"], lambda k: [t["id"] for t in by_id[k]["pre"] if "id" in t and t["id"] != k], needs, TREE_DEPTH, titled)}</details>')
+                         f'<p><small>Each course\'s own prerequisites, down to the first courses in the chain. '
+                         f'Click a course\'s arrow to fold or unfold its branch. A course that several '
+                         f'branches need is listed in full once, where it is first reached, and linked from the others.</small></p>'
+                         f'{tree(c["id"], pre_ids, needs, page_link, TREE_DEPTH, titled, anchor="pre", also="also a prerequisite for")}</details>')
         else:
             parts.append(f'    <p class="no-reqs">{"None that Banner enforces." if c["preTerm"] else "Not downloaded from Banner yet."}</p>')
         if c["co"]:
@@ -260,10 +322,26 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
         if c["requiredBy"]:
             parts.append(f'    <p class="reqs">{", ".join(page_link(k) for k in c["requiredBy"])}</p>')
             parts.append(f'    <details class="req-tree"><summary>What it leads to</summary>'
-                         f'<p><small>Courses that list it as a prerequisite, then the courses that list those, {LEADS_DEPTH} levels deep.</small></p>'
-                         f'{tree(c["id"], lambda k: by_id[k]["requiredBy"], titled, LEADS_DEPTH)}</details>')
+                         f'<p><small>Courses that list it as a prerequisite, then the courses that list those, {LEADS_DEPTH} levels deep. '
+                         f'Where branches converge, a course is listed in full once, under the last of its '
+                         f'prerequisites to arrive, with the others it also requires named beneath it. '
+                         f'Click a course\'s arrow to unfold its branch.</small></p>'
+                         f'{tree(c["id"], lambda k: by_id[k]["requiredBy"], titled, page_link, LEADS_DEPTH, anchor="post", also="also requires", converge=True, open_levels=0, count="leads to {}")}</details>')
         else:
             parts.append('    <p class="no-reqs">No course lists it as a prerequisite.</p>')
+        if graph_ids(c):
+            parts.append('    <h2>Graph</h2>')
+            parts.append(f'    <details class="req-graph" data-course="{e(c["id"])}"><summary>Prerequisites and what it leads to, as a graph</summary>'
+                         '<p><small>Arrows run from a prerequisite to the course that requires it, so a course '
+                         'with several arrows in is where branches converge. Click a course to fold or unfold its '
+                         'branch (a dashed outline marks one with more to show); double-click to open its page. '
+                         'Arrows do not show whether prerequisites are alternatives; the lists above do.</small></p>'
+                         '<div class="graph-tools" hidden><button type="button" data-act="fit">Fit</button>'
+                         '<button type="button" data-act="in">Zoom in</button><button type="button" data-act="out">Zoom out</button>'
+                         '<button type="button" data-act="reset">Reset</button></div>'
+                         '<div class="graph-box" role="img" aria-label="Prerequisite graph"></div>'
+                         '<p class="graph-info" aria-live="polite"></p>'
+                         '<noscript><p>The graph needs JavaScript.</p></noscript></details>')
         syl_links = []
         for syl in c["syllabi"]:
             bits = [syl["label"] or "Syllabus", syl.get("termName") or syl["term"],
@@ -302,7 +380,8 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                                 "Enrolled", "Delivery"], rows))
         desc = f'When {c["id"]} has been offered at WWU and who taught it.'
         (site / "course" / f'{course_slug[c["id"]]}.html').write_text(
-            page(name, desc, "\n".join(parts)), encoding="utf-8")
+            page(name, desc, "\n".join(parts),
+                 '  <script src="../reqs.js" defer></script>\n'), encoding="utf-8")
 
     # ---------- instructor pages ----------
     for name, pairs in taught.items():
@@ -352,5 +431,14 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
             + table(["Instructor", "Courses", "Sections", "Terms"], rows))
     (site / "instructor" / "index.html").write_text(
         page("All instructors", "Every WWU instructor of record in the explorer's terms.", body), encoding="utf-8")
+
+    # ---------- requisite graph ----------
+    # What reqs.js draws: each course's title, page and the courses on either
+    # side of it, for every course with any.
+    graph = {c["id"]: [c["title"], course_slug[c["id"]], pre_ids(c["id"]), c["requiredBy"]]
+             for c in courses if graph_ids(c)}
+    (site / "data").mkdir(parents=True, exist_ok=True)
+    (site / "data" / "graph.json").write_text(
+        json.dumps(graph, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
 
     return course_slug, instr_slug

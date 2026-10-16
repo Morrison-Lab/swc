@@ -218,8 +218,26 @@ mark { background: var(--mark); color: inherit; border-radius: 2px; }
 .no-syllabi { color: var(--muted); font-size: .9rem; margin: 4px 0; }
 .reqs { font-size: .95rem; margin: 4px 0; line-height: 1.6; }
 .no-reqs { color: var(--muted); font-size: .9rem; margin: 4px 0; }
-.req-tree { margin: 8px 0 12px; }
-.req-tree summary { cursor: pointer; color: var(--accent); }
+.req-tree, .req-graph { margin: 8px 0 12px; }
+.req-tree > summary, .req-graph > summary { cursor: pointer; color: var(--accent); }
 .req-tree ul { margin: 2px 0; padding-left: 1.2em; }
 .req-tree li { margin: 2px 0; }
+/* A course with branches of its own folds: its arrow stands in for the bullet. */
+.req-tree li:has(> details) { list-style: none; margin-left: -1em; }
+.req-tree li > details > summary { cursor: pointer; }
+.req-tree li > details > summary::marker { color: var(--accent); }
+.req-tree li.flash { animation: flash 1.6s ease-out; }
+@keyframes flash { from { background: var(--mark); } to { background: transparent; } }
 .req-tree small, .reqs small { color: var(--muted); }
+.tree-tools, .graph-tools { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 6px; }
+.graph-tools[hidden] { display: none; }
+.tree-tools button, .graph-tools button {
+  padding: 3px 10px; border: 1px solid var(--line); border-radius: 6px;
+  background: var(--panel); color: var(--fg); font: inherit; font-size: .85rem; cursor: pointer;
+}
+.tree-tools button:hover, .graph-tools button:hover { border-color: var(--accent); }
+.graph-box {
+  height: min(70vh, 640px); min-height: 360px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--bg);
+}
+.graph-info { font-size: .9rem; color: var(--muted); min-height: 1.5em; }
