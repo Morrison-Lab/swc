@@ -170,7 +170,7 @@ def tree(root: str, children, label, link, depth: int, short=None, *, anchor: st
     for k in queue:  # grows as it goes
         if steps[k] >= depth:
             continue
-        for c in children(k):
+        for c in dict.fromkeys(children(k)):
             out[k].append(c)
             if c != root:
                 parents[c].append(k)
@@ -339,7 +339,7 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                          '<div class="graph-tools" hidden><button type="button" data-act="fit">Fit</button>'
                          '<button type="button" data-act="in">Zoom in</button><button type="button" data-act="out">Zoom out</button>'
                          '<button type="button" data-act="reset">Reset</button></div>'
-                         '<div class="graph-box" role="img" aria-label="Prerequisite graph"></div>'
+                         f'<div class="graph-box" role="img" aria-label="Prerequisites of {e(c["id"])} and what it leads to, as a graph"></div>'
                          '<p class="graph-info" aria-live="polite"></p>'
                          '<noscript><p>The graph needs JavaScript.</p></noscript></details>')
         syl_links = []

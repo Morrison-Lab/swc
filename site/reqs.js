@@ -38,6 +38,15 @@
     list.before(bar);
   });
 
+  // The id the URL's hash names; none for a malformed one.
+  const hashId = () => {
+    try {
+      return decodeURIComponent(location.hash.slice(1));
+    } catch {
+      return "";
+    }
+  };
+
   // Opens every fold around the entry `id` and scrolls to it.
   function reveal(id) {
     const el = id && document.getElementById(id);
@@ -53,10 +62,10 @@
     if (!a) return;
     ev.preventDefault();
     history.pushState(null, "", a.getAttribute("href"));
-    reveal(decodeURIComponent(location.hash.slice(1)));
+    reveal(hashId());
   });
-  window.addEventListener("hashchange", () => reveal(decodeURIComponent(location.hash.slice(1))));
-  if (location.hash) reveal(decodeURIComponent(location.hash.slice(1)));
+  window.addEventListener("hashchange", () => reveal(hashId()));
+  if (location.hash) reveal(hashId());
 
   // ---------- graph ----------
   const loadScript = ([src, integrity]) => new Promise((resolve, reject) => {
@@ -65,7 +74,10 @@
     s.integrity = integrity;
     s.crossOrigin = "anonymous";
     s.onload = resolve;
-    s.onerror = () => reject(new Error("the graph library did not load from cdn.jsdelivr.net"));
+    s.onerror = () => {
+      s.remove();
+      reject(new Error("the graph library did not load from cdn.jsdelivr.net"));
+    };
     document.head.append(s);
   });
   let libs, graphData;
@@ -180,12 +192,13 @@
       const { side, edges } = shown();
       const nodes = [...side].map(([k, s]) => {
         const [open, next] = foldOf(k, s);
-        const hidden = open && !open.has(k) ? next.length : 0;
+        const hidden = open && !open.has(k) ? next.filter((c) => g[c] && !side.has(c)).length : 0;
+        const more = open && !open.has(k) && next.some((c) => g[c]);
         const title = clip(g[k]?.[0] || "", 34);
         return {
           group: "nodes",
           data: { id: k, side: s, label: `${k}${hidden ? `  (+${hidden})` : ""}\n${title}` },
-          classes: [s === "root" ? "root" : "", hidden ? "more" : ""].join(" ").trim(),
+          classes: [s === "root" ? "root" : "", more ? "more" : ""].join(" ").trim(),
         };
       });
       return nodes.concat([...edges.values()].map((d) => ({ group: "edges", data: d })));
