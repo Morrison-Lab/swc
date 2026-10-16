@@ -185,13 +185,15 @@
     } else {
       list = data.courses;
     }
-    // One result per course: codes of the same course (crosslist.py) give
-    // way to the best-ranked one that matches.
+    // One result per course: of the codes one course is listed under
+    // (crosslist.py), a search shows the best-ranked match, and browsing
+    // shows the canonical code when it matches the filters.
+    const ok = list.filter(matches);
+    const okIds = new Set(ok.map((c) => c.id));
     const seen = new Set();
-    current = list.filter((c) => {
-      if (!matches(c)) return false;
+    current = ok.filter((c) => {
       const key = c.canon || c.id;
-      if (seen.has(key)) return false;
+      if (seen.has(key) || (!q && key !== c.id && okIds.has(key))) return false;
       seen.add(key);
       return true;
     });

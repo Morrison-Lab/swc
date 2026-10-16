@@ -11,9 +11,10 @@ the same scheduled meetings (days, times and room), which catches 400- and
 course codes it was taught with that term, whatever they are.
 
 Courses are the same course when they were taught together in at least half
-of the terms each was offered, under similar titles each time. That leaves
-out special-topics numbers (HIST 490), which pair with a different course
-from term to term, and classes that only share a room now and then. Two
+of the terms each was offered, under similar titles each time, or every time
+when either is a topics number whose title changes from term to term. That
+leaves out special-topics numbers (HIST 490), which pair with a different
+course from term to term, and classes that only share a room now and then. Two
 undergraduate numbers in one subject are never one course: MUS 212, 312 and
 412 (Applied Instruction: Piano) or JOUR 214, 314 and 414 (The Front Staff)
 meet together but are taken in turn. Same-course codes form one group with a
@@ -123,8 +124,18 @@ def link_courses(courses: dict[str, dict]) -> list[list[str]]:
 
     offered = {k: set(c["offered"]) for k, c in courses.items()}
 
+    def topics(k: str) -> bool:
+        """A number whose title changes from term to term (HIST 490, or
+        WGSS 365 "Feminist Pop Culture" taught as "Sexuality & History")."""
+        c = courses[k]
+        names = sorted({s["title"] or c["title"] for s in c["sections"]} | {c["title"]} - {""})
+        return any(similar(x, y) < 0.5 for i, x in enumerate(names) for y in names[i + 1:])
+
     def same_course(a: str, b: str, ts: set[str]) -> bool:
-        if 2 * len(ts) < max(len(offered[a]), len(offered[b])):
+        most = max(len(offered[a]), len(offered[b]))
+        # A topics number is one course with another only if they were
+        # taught together every time either was offered (GEOL 497W, 597W).
+        if len(ts) < most if topics(a) or topics(b) else 2 * len(ts) < most:
             return False
         for t in ts:
             pair = titles[a, b, t]
