@@ -221,6 +221,9 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                 c["dept"] if c["dept"] and c["dept"] != c["subjDesc"] else ""]
         parts = [f"    <h1>{e(name)}</h1>",
                  f'    <p class="meta">{e(" · ".join(x for x in meta if x))}</p>']
+        if c["same"]:
+            parts.append(f'    <p class="also">Also listed as '
+                         f'{", ".join(course_link(by_id[k]) for k in c["same"])}</p>')
         if c["desc"]:
             parts.append(f'    <p class="desc">{e(c["desc"])}</p>')
         if c["offered"]:
@@ -291,6 +294,8 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
             secs = sorted(c["sections"], key=lambda s: (s["term"], s["seq"]), reverse=True)
             for s in secs:
                 title = f'<br><small>{e(s["title"])}</small>' if s["title"] else ""
+                if s.get("with"):
+                    title += f'<br><small>with {", ".join(course_link(by_id[k]) for k in s["with"])}</small>'
                 instr = "<br>".join(instr_link(i) for i in s["instr"]) or "Staff"
                 rows.append(
                     f'<tr><td>{e(term_names.get(s["term"], s["term"]))}</td>'
