@@ -128,7 +128,7 @@ def link_courses(courses: dict[str, dict]) -> list[list[str]]:
         """A number whose title changes from term to term (HIST 490, or
         WGSS 365 "Feminist Pop Culture" taught as "Sexuality & History")."""
         c = courses[k]
-        names = sorted({s["title"] or c["title"] for s in c["sections"]} | {c["title"]} - {""})
+        names = sorted(({s["title"] or c["title"] for s in c["sections"]} | {c["title"]}) - {""})
         return any(similar(x, y) < 0.5 for i, x in enumerate(names) for y in names[i + 1:])
 
     def same_course(a: str, b: str, ts: set[str]) -> bool:

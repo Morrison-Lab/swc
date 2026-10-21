@@ -176,7 +176,7 @@ def main() -> None:
           f"{len(loaded_terms)} terms -> {OUT.relative_to(ROOT)} "
           f"({OUT.stat().st_size / 1e6:.1f} MB), {len(course_pages)} course and "
           f"{len(instr_pages)} instructor pages; {len(groups)} courses "
-          f"listed under more than one code")
+          f"listed under more than one code ({sum(map(len, groups))} codes)")
 
 
 if __name__ == "__main__":
