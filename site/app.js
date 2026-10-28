@@ -185,7 +185,18 @@
     } else {
       list = data.courses;
     }
-    current = list.filter(matches);
+    // One result per course: of the codes one course is listed under
+    // (crosslist.py), a search shows the best-ranked match, and browsing
+    // shows the canonical code when it matches the filters.
+    const ok = list.filter(matches);
+    const okIds = new Set(ok.map((c) => c.id));
+    const seen = new Set();
+    current = ok.filter((c) => {
+      const key = c.canon || c.id;
+      if (seen.has(key) || (!q && key !== c.id && okIds.has(key))) return false;
+      seen.add(key);
+      return true;
+    });
     shown = PAGE;
     writeHash();
     render();
@@ -244,7 +255,7 @@
         for (const s of secs) {
           const full = s.max && s.enr >= s.max;
           rows.push(`<tr>
-            <td>${esc(s.seq)}${s.title ? `<br><small>${esc(s.title)}</small>` : ""}</td>
+            <td>${esc(s.seq)}${s.title ? `<br><small>${esc(s.title)}</small>` : ""}${s.with?.length ? `<br><small>with ${s.with.map((id) => reqLink({ id })).join(", ")}</small>` : ""}</td>
             <td>${esc(s.crn)}</td>
             <td>${esc(s.type || "")}</td>
             <td class="wrap-ok">${s.mtg.length ? s.mtg.map((m) => esc(meetingText(m))).join("<br>") : "TBA"}</td>
@@ -302,6 +313,7 @@
         <span class="code">${highlight(c.id)}</span>: ${highlight(c.title || "(untitled)")}
       </button></h2>
       <p class="meta">${meta} ${attrs} ${coursePageLink(c, "Course page", "page-link")}</p>
+      ${c.same?.length ? `<p class="also">Also listed as ${c.same.map((id) => reqLink({ id })).join(", ")}</p>` : ""}
       ${c.desc ? `<p class="desc${isOpen ? "" : " short"}">${highlight(c.desc)}</p>` : ""}
       <ul class="chips">${chips(c)}</ul>
       ${isOpen ? `<div class="detail">

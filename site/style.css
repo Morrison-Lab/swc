@@ -153,6 +153,7 @@ button.link { background: none; border: 0; color: var(--accent); cursor: pointer
 .course h2 button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .course .code { font-weight: 700; }
 .meta { color: var(--muted); font-size: .9rem; margin: 2px 0 6px; }
+.also { font-size: .9rem; margin: 0 0 6px; }
 .desc { margin: 4px 0 8px; }
 .desc.short { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; padding: 0; list-style: none; }
