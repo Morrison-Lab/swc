@@ -6,6 +6,15 @@ scraper, the build, and how the site is published.
 Build the site locally with `python3 scraper/build.py`, then serve `site/`
 (`python3 -m http.server -d site`).
 
+A fresh checkout builds no courses: only the description, attribute and
+requisite seeds are committed, and sections take hours to scrape from Banner.
+To test course pages or `site/` scripts against real data, download the
+published index (`https://morrison-lab.github.io/swc/data/courses.json`, the
+same shape `build.py` writes) and pass it to `pages.write_pages(data, site_dir)`
+with a scratch copy of `site/` as `site_dir`.
+In Playwright, route `cdn.jsdelivr.net` to local copies of the pinned files
+(their SRI hashes still match) if the browser cannot reach the CDN.
+
 ## CI
 
 `tests.yml` compiles the scripts and builds the index from the committed data.
