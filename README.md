@@ -86,7 +86,9 @@ Keep the file plain CSV, with no comment lines, so GitHub shows it as a table.
 Link only public pages, and nothing that names a student.
 
 WWU has no public syllabus archive, so the list is built by hand.
-The first rows come from faculty course sites that are public and list no students.
+The first rows come from faculty course sites that are public and list no students,
+and from the sample syllabi WesternOnline publishes for its self-paced courses.
+Instructors can make a Canvas syllabus page public, but few do and nothing lists them.
 Each course's card and page also link to the WWU Bookstore's textbook lookup
 and to a [Suggest a syllabus link](https://github.com/Morrison-Lab/swc/issues/new?template=syllabus.yml) issue form, filled in with the course;
 a suggestion becomes a row here once someone checks the page.
