@@ -89,23 +89,32 @@
   }));
 
   document.querySelectorAll(".req-graph").forEach((box) => {
+    const info = box.querySelector(".graph-info");
+    // Any failure, loading or drawing, tears down what was set up so the
+    // next open starts over rather than stacking a second graph on the box.
+    const fail = (e) => {
+      libs = graphData = undefined;
+      box.drawPending = null;
+      box.cleanup?.();
+      box.dataset.ready = "";
+      info.textContent = `Could not draw the graph (${e.message}).`;
+    };
     box.addEventListener("toggle", () => {
       if (!box.open) return;
       if (box.drawPending) {
         const f = box.drawPending;
         box.drawPending = null;
-        f();
+        try {
+          f();
+        } catch (e) {
+          fail(e);
+        }
         return;
       }
       if (box.dataset.ready) return;
       box.dataset.ready = "1";
-      const info = box.querySelector(".graph-info");
       info.textContent = "Loading the graph...";
-      Promise.all([loadLibs(), loadGraph()]).then(([, g]) => draw(box, g)).catch((e) => {
-        libs = graphData = undefined;
-        box.dataset.ready = "";
-        info.textContent = `Could not draw the graph (${e.message}).`;
-      });
+      Promise.all([loadLibs(), loadGraph()]).then(([, g]) => draw(box, g)).catch(fail);
     });
   });
 
@@ -225,8 +234,13 @@
       boxSelectionEnabled: false,
       autoungrabify: true,
     });
-    container.addEventListener("pointerdown", () => cy.userZoomingEnabled(true));
-    container.addEventListener("pointerleave", () => cy.userZoomingEnabled(false));
+    const zoomOn = () => cy.userZoomingEnabled(true);
+    const zoomOff = () => cy.userZoomingEnabled(false);
+    container.addEventListener("pointerdown", zoomOn);
+    container.addEventListener("pointerleave", zoomOff);
+    // The courses a folded course would add if unfolded: none when all its
+    // neighbours on that side are already shown through other branches.
+    const unshown = (next) => next.filter((c) => g[c] && !cy.getElementById(c).length).length;
 
     // Redraws the graph; keeps `anchor` where it was on screen, or fits the
     // whole graph when there is none (zoomed in on the course if that would
@@ -267,7 +281,9 @@
         : `${n} course${n === 1 ? " that requires it is" : "s that require it are"}`;
       let state = "";
       if (open && n) {
-        state = open.has(k) ? ` ${what} shown; click again to fold.` : ` ${what} folded; click again to show.`;
+        state = open.has(k) ? ` ${what} shown; click again to fold.`
+          : unshown(next) ? ` ${what} folded; click again to show.`
+          : ` ${what} already shown through other branches.`;
       }
       info.append(`${k}: ${g[k]?.[0] || ""}.${state} `);
       const slug = g[k]?.[1];
@@ -285,7 +301,9 @@
       node.connectedEdges().addClass("hl");
       const k = node.id();
       const [open, next] = foldOf(k, node.data("side"));
-      if (!open || !next.length) {
+      // Nothing to fold or unfold: the root, a course with no neighbours on
+      // its side, or a folded one whose neighbours are all shown already.
+      if (!open || !next.length || (!open.has(k) && !unshown(next))) {
         describe(node);
         return;
       }
@@ -306,7 +324,7 @@
 
     const tools = box.querySelector(".graph-tools");
     tools.hidden = false;
-    tools.addEventListener("click", (ev) => {
+    const onTools = (ev) => {
       const act = ev.target.closest("button")?.dataset.act;
       const mid = { x: container.clientWidth / 2, y: container.clientHeight / 2 };
       if (act === "fit") cy.fit(undefined, 24);
@@ -316,10 +334,21 @@
         start();
         render();
       }
-    });
+    };
+    tools.addEventListener("click", onTools);
     // theme.js switches themes with a data-theme attribute on <html>.
-    new MutationObserver(() => cy.style(style()))
-      .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    const themeWatch = new MutationObserver(() => cy.style(style()));
+    themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    // Undoes all of the above, for the failure path in the toggle handler.
+    box.cleanup = () => {
+      themeWatch.disconnect();
+      tools.removeEventListener("click", onTools);
+      tools.hidden = true;
+      container.removeEventListener("pointerdown", zoomOn);
+      container.removeEventListener("pointerleave", zoomOff);
+      cy.destroy();
+      box.cleanup = null;
+    };
 
     // Cytoscape cannot lay out in a closed <details>, which has no size, so
     // a graph that finished loading after its box was closed is drawn when
