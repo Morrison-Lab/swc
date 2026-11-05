@@ -17,6 +17,9 @@ The rest are thin callers of reusable workflows in
 (`@claude` mentions), `check-secrets.yml` (gitleaks over the full history),
 `check-typos.yml`, `check-junk-files.yml`, `lint-workflows.yml` (actionlint and zizmor,
 configured by `.github/zizmor.yml`), and the warn-only `check-new-line-breaks.yml` and
-`check-ai-tells.yml`. `.github/dependabot.yml` keeps the action pins current.
+`check-ai-tells.yml`.
+`check-caller-permissions.yml` is pinned at `@v3`, because its callee exists only from that tag.
+It fails when a job here calls a `Morrison-Lab/gha` workflow without the permissions the callee requests.
+`.github/dependabot.yml` keeps the action pins current.
 
 `.claude/settings.json` enables the lab's `ai-config` plugin for Claude Code sessions here.

@@ -1,6 +1,6 @@
 # Fails when a workflow calls a Morrison-Lab/gha reusable workflow from a job that
 # does not grant the permissions the callee's jobs request. GitHub rejects such a
-# call at startup, so a scheduled caller stops silently (Morrison-Lab/lds#1468).
+# call at startup, so a scheduled caller stops silently (Morrison-Lab/lds#1469).
 # This workflow reports the mismatch at pull-request time. The push trigger has no
 # path filter, so a push to main also catches a gha tag that has since moved.
 name: Check caller permissions
