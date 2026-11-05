@@ -90,7 +90,14 @@
 
   document.querySelectorAll(".req-graph").forEach((box) => {
     box.addEventListener("toggle", () => {
-      if (!box.open || box.dataset.ready) return;
+      if (!box.open) return;
+      if (box.drawPending) {
+        const f = box.drawPending;
+        box.drawPending = null;
+        f();
+        return;
+      }
+      if (box.dataset.ready) return;
       box.dataset.ready = "1";
       const info = box.querySelector(".graph-info");
       info.textContent = "Loading the graph...";
@@ -160,29 +167,31 @@
     }
 
     // The courses reachable from the root through unfolded courses, with the
-    // side they were reached on, and an edge from each unfolded course to each
-    // of its shown neighbours: several edges into one course are branches
-    // converging on it.
+    // side they were reached on, and an edge for every prerequisite link
+    // between two shown courses, whichever side or fold state they are in:
+    // several edges into one course are branches converging on it.
     function shown() {
       const side = new Map([[root, "root"]]);
-      const edges = new Map();
-      const walk = (open, next, name, edge) => {
+      const walk = (open, next, name) => {
         const queue = [root];
         for (const k of queue) {
           if (!open.has(k)) continue;
           for (const c of next(k)) {
-            if (!g[c]) continue;
-            const [s, t] = edge(k, c);
-            edges.set(`${s}>${t}`, { source: s, target: t });
-            if (!side.has(c)) {
+            if (g[c] && !side.has(c)) {
               side.set(c, name);
               queue.push(c);
             }
           }
         }
       };
-      walk(up, pre, "pre", (k, c) => [c, k]);
-      walk(down, post, "post", (k, c) => [k, c]);
+      walk(up, pre, "pre");
+      walk(down, post, "post");
+      const edges = new Map();
+      for (const k of side.keys()) {
+        for (const c of pre(k)) {
+          if (side.has(c)) edges.set(`${c}>${k}`, { source: c, target: k });
+        }
+      }
       return { side, edges };
     }
 
@@ -193,7 +202,7 @@
       const nodes = [...side].map(([k, s]) => {
         const [open, next] = foldOf(k, s);
         const hidden = open && !open.has(k) ? next.filter((c) => g[c] && !side.has(c)).length : 0;
-        const more = open && !open.has(k) && next.some((c) => g[c]);
+        const more = hidden > 0;
         const title = clip(g[k]?.[0] || "", 34);
         return {
           group: "nodes",
@@ -312,7 +321,15 @@
     new MutationObserver(() => cy.style(style()))
       .observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
-    start();
-    render();
+    // Cytoscape cannot lay out in a closed <details>, which has no size, so
+    // a graph that finished loading after its box was closed is drawn when
+    // the box is next opened.
+    const first = () => {
+      cy.resize();
+      start();
+      render();
+    };
+    if (box.open) first();
+    else box.drawPending = first;
   }
 })();

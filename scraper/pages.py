@@ -329,7 +329,7 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
         if c["requiredBy"]:
             parts.append(f'    <p class="reqs">{", ".join(page_link(k) for k in c["requiredBy"])}</p>')
             parts.append(f'    <details class="req-tree"><summary>What it leads to</summary>'
-                         f'<p><small>Courses that list it as a prerequisite, then the courses that list those, {LEADS_DEPTH} levels deep. '
+                         f'<p><small>Courses that list it as a prerequisite, then the courses that list those, out to {LEADS_DEPTH} steps away. '
                          f'Where branches converge, a course is listed in full once, under the last of its '
                          f'prerequisites to arrive, with the others it also requires named beneath it. '
                          f'Click a course\'s arrow to unfold its branch.</small></p>'

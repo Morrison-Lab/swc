@@ -35,7 +35,7 @@ A graduate student who is the instructor of record still appears, as on WWU's ow
 ```sh
 pip install requests
 python3 scraper/scrape.py      # sections, catalog, descriptions, requisites -> data/raw/
-python3 scraper/build.py       # -> site/data/courses.json, site/course/, site/instructor/
+python3 scraper/build.py       # -> site/data/courses.json and graph.json, site/course/, site/instructor/
 python3 -m http.server -d site 8000
 ```
 
