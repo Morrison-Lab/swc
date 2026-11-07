@@ -33,3 +33,9 @@ It fails when a job here calls a `Morrison-Lab/gha` workflow without the permiss
 `.github/dependabot.yml` keeps the action pins current.
 
 `.claude/settings.json` enables the lab's `ai-config` plugin for Claude Code sessions here.
+
+In a cloud session, TLS to `*.wwu.edu` (Banner and the department sites)
+fails: the container's CA store lacks the emSign root WWU's chain ends in.
+`pip download certifi`, unzip it, concatenate its `cacert.pem` with the
+session's proxy bundle, and point `REQUESTS_CA_BUNDLE` at the result;
+never turn verification off.
