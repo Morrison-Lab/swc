@@ -19,12 +19,24 @@ undergraduate numbers in one subject are never one course: MUS 212, 312 and
 412 (Applied Instruction: Piano) or JOUR 214, 314 and 414 (The Front Staff)
 meet together but are taken in turn. Same-course codes form one group with a
 canonical code, and every record keeps its own code, sections and page.
+
+Courses are also the same course when the catalog says so. A description
+ending "Also offered as EECE 346." pairs MATH 346 with EECE 346 even when
+every section is scheduled under one code, so Banner never groups them. The
+pair counts when each description names the other or the titles agree. That
+leaves out a one-sided note pointing to a generic number (PLSC 437 names
+SOC 437, Faculty-Led Study Abroad).
 """
 
 from __future__ import annotations
 
 import re
 from collections import defaultdict
+
+# "Also offered as ENVS 449." or "Also offered as DNC 398, MUS 398 and
+# THTR 398." in a catalog description.
+ALSO_OFFERED = re.compile(r"Also offered as ([^.]*)")
+CODE = re.compile(r"\b[A-Z][A-Z/&]{1,4} \d{3}[A-Z]?\b")
 
 # Words that grad, honors and topics versions add to a title ("Advanced
 # Limnology", "Seminar in Cost Management"), and filler.
@@ -63,6 +75,19 @@ def similar(a: str, b: str) -> float:
 
     return min(sum(found(w, wb) for w in wa) / len(wa),
                sum(found(w, wa) for w in wb) / len(wb))
+
+
+def catalog_pairs(courses: dict[str, dict]) -> list[tuple[str, str]]:
+    """Pairs of course codes that a catalog description calls one course."""
+    named = {k: {x for m in ALSO_OFFERED.finditer(c["desc"] or "")
+                 for x in CODE.findall(m.group(1))} - {k}
+             for k, c in courses.items()}
+    pairs = set()
+    for a, others in named.items():
+        for b in others & courses.keys():
+            if a in named[b] or similar(courses[a]["title"], courses[b]["title"]) >= 0.5:
+                pairs.add(tuple(sorted((a, b))))
+    return sorted(pairs)
 
 
 def link_courses(courses: dict[str, dict]) -> list[list[str]]:
@@ -151,11 +176,12 @@ def link_courses(courses: dict[str, dict]) -> list[list[str]]:
         return (ca["subj"] == cb["subj"] and
                 (ca["level"] or 0) < 500 and (cb["level"] or 0) < 500)
 
+    # The most often joined pairs first, so a group grows from its core, then
+    # the pairs the catalog names.
+    pairs = [(a, b) for (a, b), ts in sorted(joint.items(), key=lambda kv: (-len(kv[1]), kv[0]))
+             if same_course(a, b, ts)]
     group = {}  # course -> its group, a list shared by every member
-    # The most often joined pairs first, so a group grows from its core.
-    for (a, b), ts in sorted(joint.items(), key=lambda kv: (-len(kv[1]), kv[0])):
-        if not same_course(a, b, ts):
-            continue
+    for a, b in pairs + catalog_pairs(courses):
         ga, gb = group.get(a, [a]), group.get(b, [b])
         if ga is gb or any(sequence(x, y) for x in ga for y in gb):
             continue
