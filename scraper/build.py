@@ -2,7 +2,7 @@
 """Build the explorer's search index from the files scrape.py downloads.
 
 Reads data/raw/ (terms, sections, catalog, descriptions, attributes,
-requisites) and
+requisites, profiles) and
 data/syllabi.csv, and writes site/data/courses.json: one record per course,
 with its catalog details and every section in the downloaded terms, linked
 to the other codes the same course is listed under (crosslist.py). It also
@@ -19,6 +19,7 @@ import html
 import json
 import re
 import sys
+import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
@@ -51,6 +52,41 @@ def term_name(code: str) -> str:
     if len(code) == 6 and code.isdigit() and code[4:] in season:
         return f"{season[code[4:]]} {code[:4]}"
     return code
+
+
+def name_words(name: str) -> list[str]:
+    """'Ćurgus, Branko' -> ['curgus', 'branko']: lower case, no accents or
+    punctuation."""
+    plain = unicodedata.normalize("NFKD", name.casefold())
+    plain = "".join(ch for ch in plain if not unicodedata.combining(ch))
+    return re.findall(r"[a-z0-9]+", plain.replace("'", "").replace("\u2019", ""))
+
+
+def match_profiles(names: set[str], profiles: list[list[str]]) -> dict[str, str]:
+    """Banner names ('Last, First Middle') -> a profile page (profiles.py).
+
+    A profile matches when its name starts with the instructor's first name
+    and ends with their whole last name, ignoring degrees and middle names:
+    'Noguchi, Kimihiro' is 'Kimihiro Noguchi, PhD'. Of several pages for one
+    person (a department's and a college's), the shortest address wins.
+    """
+    index = defaultdict(set)  # (first, last word) -> urls
+    for name, url in profiles:
+        w = name_words(name)
+        if len(w) >= 2:
+            index[w[0], w[-1]].add((tuple(w), url))
+    out = {}
+    for name in names:
+        last, _, rest = name.partition(",")
+        first, last = name_words(rest)[:1], name_words(last)
+        if not first or not last:
+            continue
+        hits = sorted((url for w, url in index[first[0], last[-1]]
+                       if w[-len(last):] == tuple(last) and len(w) > len(last)),
+                      key=lambda u: (len(u), u))
+        if hits:
+            out[name] = hits[0]
+    return out
 
 
 def level(num: str) -> int | None:
@@ -157,6 +193,8 @@ def main() -> None:
     add_requisites(courses, load(RAW / "requisites.json", {}))
 
     ordered = sorted(courses.values(), key=lambda c: (c["subj"], c["num"]))
+    instructors = {i for c in ordered for s in c["sections"] for i in s["instr"]}
+    profiles = match_profiles(instructors, load(RAW / "profiles.json", []))
     out = {
         "terms": [{"code": c, "name": term_names.get(c, c)}
                   for c in loaded_terms],
@@ -164,6 +202,7 @@ def main() -> None:
         "methods": dict(sorted(methods.items())),
         "catalogTerm": terms[0]["code"] if terms else "",
         "courses": ordered,
+        "profiles": dict(sorted(profiles.items())),
     }
     course_pages, instr_pages = write_pages(out, SITE)
     out["pages"] = {"courses": course_pages, "instructors": instr_pages}
