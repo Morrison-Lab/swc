@@ -79,7 +79,8 @@ def roots(page: str) -> list[str]:
     out = set()
     for href, _ in LINK.findall(page):
         p = urlsplit(href.strip())
-        if p.scheme not in ("http", "https") or not (p.hostname or "").endswith("wwu.edu"):
+        host = p.hostname or ""
+        if p.scheme not in ("http", "https") or not (host == "wwu.edu" or host.endswith(".wwu.edu")):
             continue
         seg = p.path.strip("/").split("/")[0]
         seg = "" if "." in seg else seg  # index.shtml and the like
