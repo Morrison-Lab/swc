@@ -1,12 +1,13 @@
 __pycache__/
 
 # Downloaded and built data (the Pages workflow regenerates it).
-# descriptions.json, attributes.json and requisites.json are kept as seeds
-# for a fresh run.
+# descriptions.json, attributes.json, requisites.json and profiles.json are
+# kept as seeds for a fresh run.
 data/raw/*
 !data/raw/descriptions.json
 !data/raw/attributes.json
 !data/raw/requisites.json
+!data/raw/profiles.json
 site/data/
 site/course/
 site/instructor/
