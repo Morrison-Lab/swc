@@ -295,6 +295,13 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
             parts.append(
                 f'    <p>Offered in {n} of the {len(term_names)} listed terms '
                 f'({e(span(c["offered"], term_names))}).</p>')
+        elif taught_as := [by_id[k] for k in c["same"] if by_id[k]["offered"]]:
+            # A cross-listing scheduled only under its other code (MATH 346
+            # runs as EECE 346).
+            parts.append(
+                f'    <p>Not offered as {e(c["id"])} in the listed terms; taught as '
+                + ", ".join(f'{course_link(o)} ({e(span(o["offered"], term_names))})'
+                            for o in taught_as) + ".</p>")
         else:
             parts.append("    <p>Not offered in the listed terms.</p>")
         links = [f'<a href="{e(CATALOG_SEARCH)}{e(c["id"]).replace(" ", "%20")}">Catalog entry</a>',
