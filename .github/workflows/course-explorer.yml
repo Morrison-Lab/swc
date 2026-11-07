@@ -65,6 +65,22 @@ jobs:
           # new courses; the cap keeps a large backfill (an older --since)
           # inside the job's time limit. Refresh the seed locally instead.
           python3 scraper/scrape.py --max-requisites 1500 "${args[@]}"
+      # Instructors' profile pages change slowly, so the department sites are
+      # read weekly (and on manual or push runs); other runs reuse the newest
+      # cached list, or the committed seed. A separate cache, because adding a
+      # path to the one above would drop its saved terms.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: data/raw/profiles.json
+          key: course-profiles-${{ github.run_id }}
+          restore-keys: course-profiles-
+      - name: Find instructors' WWU profile pages
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != schedule ] || [ "$(date -u +%u)" = 1 ]; then
+            python3 scraper/profiles.py || echo "::warning::profiles.py failed; using the previous list"
+          fi
       - run: python3 scraper/build.py
       - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
         with:

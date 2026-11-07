@@ -13,6 +13,7 @@ and see every section of a course in the loaded terms, with its instructor, meet
 | [Browse Classes](https://registration.banner.wwu.edu/StudentRegistrationSsb/ssb/term/termSelection?mode=search) (Ellucian Banner 9) | Sections for any term back to Fall 2002: instructor, times, rooms, enrollment, delivery, attributes; the course catalog with college, department, descriptions, prerequisites and corequisites | Public JSON endpoints, no login |
 | [University Catalog](https://catalog.wwu.edu/) (Acalog) | Official course pages | Linked from each course; the site blocks scripted requests, so it is not scraped |
 | [`data/syllabi.csv`](data/syllabi.csv) | Syllabus and course-material links | Curated by hand |
+| Department websites, from the [department directory](https://www.wwu.edu/department-directory) | Instructors' profile pages | `scraper/profiles.py` reads each site's people pages for names and links, weekly |
 
 WWU retired its TimeTable/ClassFinder on 2025-10-07; Browse Classes replaced it.
 
@@ -35,6 +36,7 @@ A graduate student who is the instructor of record still appears, as on WWU's ow
 ```sh
 pip install requests
 python3 scraper/scrape.py      # sections, catalog, descriptions, requisites -> data/raw/
+python3 scraper/profiles.py    # instructors' profile pages -> data/raw/profiles.json (optional)
 python3 scraper/build.py       # -> site/data/courses.json and graph.json, site/course/, site/instructor/
 python3 -m http.server -d site 8000
 ```
@@ -98,8 +100,9 @@ a suggestion becomes a row here once someone checks the page.
 - [`scraper/scrape.py`](scraper/scrape.py): downloads from Banner into `data/raw/`
 - [`scraper/build.py`](scraper/build.py): merges sections, catalog, descriptions, requisites and syllabi into one index
 - [`scraper/requisites.py`](scraper/requisites.py): turns Banner's prerequisite and corequisite rows into course links, and finds the courses that require each course
+- [`scraper/profiles.py`](scraper/profiles.py): finds instructors' profile pages on the department websites, as name and link pairs in the committed seed `data/raw/profiles.json`; `build.py` links an instructor page to the profile whose name matches
 - [`scraper/crosslist.py`](scraper/crosslist.py): links the codes one course is listed under, cross-listed (ENRG 482 and ESCI 482) or taught at two levels (GEOL 497T and 597T), from Banner's cross-list groups and sections that share an instructor and meeting times; search shows each such course once, and its card and page say where else it is listed
-- [`scraper/pages.py`](scraper/pages.py): writes a static page per course (its prerequisites and corequisites, the courses that require it, each as a list, a foldable tree and a graph, every section it has had in the listed terms, and who taught it) and per instructor (every section they taught in those terms, in one table that `site/sections.js` sorts by any column and can combine over terms and/or courses), plus an instructor list;
+- [`scraper/pages.py`](scraper/pages.py): writes a static page per course (its prerequisites and corequisites, the courses that require it, each as a list, a foldable tree and a graph, every section it has had in the listed terms, and who taught it) and per instructor (every section they taught in those terms, in one table that `site/sections.js` sorts by any column and can combine over terms and/or courses, and a link to their WWU profile when `profiles.py` found one), plus an instructor list;
   instructors are matched by the name Banner shows;
   it also writes `site/data/graph.json`, each course's title, page and the courses on either side of it, for the graph
 - [`site/`](site/): static page (`index.html`, `app.js`, `style.css`) searching the index in the browser with [MiniSearch](https://lucaong.github.io/minisearch/);

@@ -240,6 +240,7 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
     """
     term_names = {t["code"]: t["name"] for t in data["terms"]}
     methods = data["methods"]
+    profiles = data.get("profiles", {})  # Banner name -> WWU profile page
     courses = data["courses"]
 
     taught = defaultdict(list)  # instructor -> [(course, section)]
@@ -411,6 +412,8 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                  f'    <p>{len(pairs)} section{"" if len(pairs) == 1 else "s"} of '
                  f'{len(by_course)} course{"" if len(by_course) == 1 else "s"} as instructor of record, '
                  f'{e(span(terms, term_names))}.</p>']
+        if name in profiles:
+            parts.append(f'    <p class="links"><a href="{e(profiles[name])}">WWU profile</a></p>')
         # One row per section. sections.js sorts the table by any column and
         # folds rows together over terms and/or courses; it reads each row's
         # data-* attributes, so the table reads the same without it.
