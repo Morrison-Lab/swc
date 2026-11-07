@@ -411,29 +411,31 @@ def write_pages(data: dict, site: Path) -> tuple[dict[str, str], dict[str, str]]
                  f'    <p>{len(pairs)} section{"" if len(pairs) == 1 else "s"} of '
                  f'{len(by_course)} course{"" if len(by_course) == 1 else "s"} as instructor of record, '
                  f'{e(span(terms, term_names))}.</p>']
-        rows = []
-        for _, cs in sorted(by_course.items()):
-            c = cs[0][0]
-            ts = sorted({s["term"] for _, s in cs}, reverse=True)
-            rows.append(
-                f'<tr><td>{course_link(c)}</td><td class="wrap-ok">{e(c["title"])}</td>'
-                f'<td>{len(cs)}</td>'
-                f'<td class="wrap-ok">{e(", ".join(term_names.get(t, t) for t in ts))}</td></tr>\n')
-        parts.append("    <h2>Courses</h2>")
-        parts.append(table(["Course", "Title", "Sections", "Terms"], rows))
+        # One row per section. sections.js sorts the table by any column and
+        # folds rows together over terms and/or courses; it reads each row's
+        # data-* attributes, so the table reads the same without it.
         rows = []
         for c, s in sorted(pairs, key=lambda p: (p[1]["term"], p[0]["id"], p[1]["seq"]),
                            reverse=True):
+            term = term_names.get(s["term"], s["term"])
             rows.append(
-                f'<tr><td>{e(term_names.get(s["term"], s["term"]))}</td><td>{course_link(c)}</td>'
+                f'<tr data-term="{e(s["term"])}" data-term-name="{e(term)}" '
+                f'data-course="{e(c["id"])}" data-href="../course/{course_slug[c["id"]]}.html" '
+                f'data-title="{e(c["title"])}" data-enr="{e(s["enr"] if s["enr"] is not None else "")}" '
+                f'data-max="{e(s["max"] if s["max"] is not None else "")}">'
+                f'<td data-sort="{e(s["term"])}">{e(term)}</td><td>{course_link(c)}</td>'
+                f'<td class="wrap-ok">{e(c["title"])}</td>'
                 f'<td>{e(s["seq"])}</td><td>{e(s["crn"])}</td>'
                 f'<td class="wrap-ok">{when(s)}</td>{enrolled(s)}'
                 f'<td>{e(methods.get(s["method"]) or s["method"] or "")}</td></tr>\n')
-        parts.append(f'    <h2>Every section in the listed terms ({len(pairs)})</h2>')
-        parts.append(table(["Term", "Course", "Sec", "CRN", "Meets", "Enrolled", "Delivery"], rows))
+        parts.append(f'    <h2>Sections in the listed terms ({len(pairs)})</h2>')
+        parts.append('    <div id="section-tools"></div>')
+        parts.append(table(["Term", "Course", "Title", "Sec", "CRN", "Meets", "Enrolled", "Delivery"],
+                           rows).replace("<table>", '<table id="sections">', 1))
         desc = f"Courses {short_name(name)} has taught at WWU, by term."
         (site / "instructor" / f"{instr_slug[name]}.html").write_text(
-            page(short_name(name), desc, "\n".join(parts)), encoding="utf-8")
+            page(short_name(name), desc, "\n".join(parts),
+                 '<script src="../sections.js"></script>\n'), encoding="utf-8")
 
     # ---------- instructor index ----------
     rows = []
