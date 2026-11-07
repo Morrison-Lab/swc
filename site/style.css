@@ -185,6 +185,12 @@ table { border-collapse: collapse; width: 100%; font-size: .88rem; }
 th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; }
 td.wrap-ok { white-space: normal; }
 th { color: var(--muted); font-weight: 600; }
+/* Instructor pages: sortable headings and the combine checkboxes (sections.js). */
+th button.sort { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+th button.sort:hover { color: var(--accent); }
+th[aria-sort="ascending"] button.sort::after { content: " ▲"; font-size: .7em; }
+th[aria-sort="descending"] button.sort::after { content: " ▼"; font-size: .7em; }
+.section-tools { display: flex; flex-wrap: wrap; gap: 16px; font-size: .9rem; margin: 4px 0 8px; }
 .full { color: var(--warn); }
 .open { color: var(--ok); }
 mark { background: var(--mark); color: inherit; border-radius: 2px; }
