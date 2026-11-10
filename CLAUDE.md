@@ -12,8 +12,9 @@ To test course pages or `site/` scripts against real data, download the
 published index (`https://morrison-lab.github.io/swc/data/courses.json`, the
 same shape `build.py` writes) and pass it to `pages.write_pages(data, site_dir)`
 with a scratch copy of `site/` as `site_dir`.
-The same index answers catalog questions (which courses cover a topic, when each last ran)
-faster than catalog.wwu.edu: regex over each course's `title`, `desc` and `sections[].title`.
+The same index answers catalog questions faster than catalog.wwu.edu:
+regex over each course's `title`, `desc` and `sections[].title` to find courses on a topic,
+then read its `offered` term codes (named in the top-level `terms`) for when it last ran.
 Section titles carry topics-course and HNRS 350 seminar names that the catalog omits.
 In Playwright, route `cdn.jsdelivr.net` to local copies of the pinned files
 (their SRI hashes still match) if the browser cannot reach the CDN.
