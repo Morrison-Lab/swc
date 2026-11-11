@@ -47,19 +47,18 @@ jobs:
       # inert there only because no job consumes it, and it is not a reason to
       # widen the ceiling past what gha's own README recommends.
       actions: read   # lets the reviewer read CI status (github_ci MCP server)
-      # Keep: the v3 tracked in gha#833 reinstates `checks: read` on the
-      # callee. Nothing consumes it at v2 -- gha@6c8ad441 dropped it, and the
-      # callee states that adding a job permission is a breaking change that
-      # belongs in a major-tag bump, never a v2 slide. Granting it now costs
-      # nothing and means the v3 bump needs no caller change.
+      # Required by the @v3 callee (gha#830): a reusable workflow that asks
+      # for more than its caller grants fails at startup.
       checks: read
-    uses: Morrison-Lab/gha/.github/workflows/claude-code-review.yml@v2
+    uses: Morrison-Lab/gha/.github/workflows/claude-code-review.yml@v3
     secrets: inherit
     with:
       pr-number: ${{ github.event.pull_request.number || inputs.pr_number }}
       # The SERG lab manual is R/tidyverse/Quarto guidance; this repository
       # is a Python scraper, a static site and workflows, so opt out.
       lab-manual: false
+      # No math here, and no latex-macros submodule to check it against.
+      check-latex-macros: false
       prompt-addendum: |
         ## What this repository is
 

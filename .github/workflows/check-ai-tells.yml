@@ -14,7 +14,7 @@ jobs:
   check-ai-tells:
     permissions:
       contents: read
-    uses: Morrison-Lab/gha/.github/workflows/check-ai-tells.yml@v2
+    uses: Morrison-Lab/gha/.github/workflows/check-ai-tells.yml@v3
     with:
       # Scan only the lines this PR adds. Empty on `workflow_dispatch`, which
       # scans the whole tree.
