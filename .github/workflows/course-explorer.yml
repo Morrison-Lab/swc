@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       since:
-        description: "First term code to download (e.g. 201840); blank = Winter fifteen years back"
+        description: "First term code to download (e.g. 200510); blank = Winter fifteen years back"
         required: false
         default: ""
       allow_shrink:
