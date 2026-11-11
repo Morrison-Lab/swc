@@ -20,7 +20,7 @@ WWU retired its TimeTable/ClassFinder on 2025-10-07; Browse Classes replaced it.
 By default the scraper starts from Winter fifteen calendar years before this one (Winter 2011
 in 2026), set by `HISTORY_YEARS` in `scraper/scrape.py`. Terms already downloaded stay in the
 cache, so the history grows from there rather than rolling forward.
-Earlier terms are one flag away (`--since 201840`, or `--all-terms` for everything since 2002).
+Earlier terms are one flag away (`--since 200510`, or `--all-terms` for everything since 2002).
 Past terms are downloaded once and then kept; the newest six are refreshed on every run.
 
 ### Privacy

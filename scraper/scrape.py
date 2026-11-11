@@ -22,7 +22,7 @@ instructor of record still appears, as on WWU's own Browse Classes.
 
 Usage:
     python3 scraper/scrape.py                # the last 15 calendar years onward + catalog
-    python3 scraper/scrape.py --since 201840 # Fall 2018 onward
+    python3 scraper/scrape.py --since 200510 # Winter 2005 onward
     python3 scraper/scrape.py --all-terms    # every term back to 2002
     python3 scraper/scrape.py --terms 202640 202620
 
