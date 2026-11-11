@@ -21,7 +21,7 @@ e-mail addresses and Banner IDs are dropped. A graduate student who is the
 instructor of record still appears, as on WWU's own Browse Classes.
 
 Usage:
-    python3 scraper/scrape.py                # the last 5 calendar years onward + catalog
+    python3 scraper/scrape.py                # the last 15 calendar years onward + catalog
     python3 scraper/scrape.py --since 201840 # Fall 2018 onward
     python3 scraper/scrape.py --all-terms    # every term back to 2002
     python3 scraper/scrape.py --terms 202640 202620
@@ -57,7 +57,7 @@ USER_AGENT = (
 RECENT_TERMS = 6
 # By default the site covers this many calendar years before the current one,
 # from Winter, plus every term since.
-HISTORY_YEARS = 5
+HISTORY_YEARS = 15
 
 
 class Banner:
